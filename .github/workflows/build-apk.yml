@@ -1,0 +1,52 @@
+name: Build SeatSeller APK
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'data/**'
+      - 'README.md'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install and sync
+        run: |
+          npm ci 2>&1 | tee build.log
+          npx cap sync android 2>&1 | tee -a build.log
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../gradle.log
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk SeatSeller.apk
+          gh release create "build-${{ github.run_number }}" SeatSeller.apk --latest \
+            --title "SeatSeller build ${{ github.run_number }}" \
+            --notes "Debug-signed APK. Install over the previous version."
+      - name: Push failure log
+        if: failure()
+        run: |
+          mkdir -p /tmp/logs
+          tail -n 150 build.log > /tmp/logs/build-tail.txt 2>/dev/null || true
+          tail -n 250 gradle.log > /tmp/logs/gradle-tail.txt 2>/dev/null || true
+          git config user.name "build-bot"; git config user.email "bot@users.noreply.github.com"
+          git checkout --orphan build-logs
+          git rm -rf . >/dev/null 2>&1 || true
+          cp /tmp/logs/* .
+          git add build-tail.txt gradle-tail.txt
+          git commit -m "build ${{ github.run_number }} failed"
+          git push -f origin build-logs

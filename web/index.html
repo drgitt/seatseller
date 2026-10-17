@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>SeatSeller</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>SeatSeller</h1>
+      <p class="sub" id="sub">Wizards home games, nearest first.</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="banner" id="permBanner" hidden>
+    <span>Turn on notifications to hear about games that are selling fast.</span>
+    <button type="button" id="permBtn" class="btn">Turn on</button>
+  </div>
+
+  <section class="alerts" id="alerts" hidden aria-label="Recent alerts"></section>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Which games to show">
+      <button type="button" id="f-soon" aria-pressed="true">Next 3 weeks</button>
+      <button type="button" id="f-all" aria-pressed="false">All home games</button>
+    </div>
+    <div class="fresh mono" id="fresh"></div>
+  </div>
+
+  <details class="settings" id="settings">
+    <summary>Settings and notifications</summary>
+    <div class="settings-body">
+      <label for="face">Face value per seat ($)
+        <input id="face" type="number" inputmode="decimal" min="0" step="1" placeholder="e.g. 85">
+      </label>
+      <label for="seatlabel">My seats
+        <input id="seatlabel" type="text" maxlength="40" placeholder="Section 109, rows E1 and E2">
+      </label>
+      <div class="notif" id="notifBox">
+        <div class="notif-line" id="notifStatus">Notifications work in the installed Android app.</div>
+        <div class="btn-row">
+          <button type="button" class="btn" id="testBtn">Send test</button>
+          <button type="button" class="btn" id="checkBtn">Check prices now</button>
+        </div>
+        <div class="notif-line mono" id="checkResult"></div>
+      </div>
+    </div>
+  </details>
+
+  <div class="note">Market low is the cheapest seat in the whole arena, so your section costs more. For a real row price, open a marketplace link on a game, filter to your section, and type the low, high and seat count here. Selling fast appears when listed seats drop 25% or more in a week, the market low jumps 15% or more, or a marketplace shows low inventory.</div>
+
+  <div class="list" id="list"></div>
+  <p class="foot">Schedule from the NBA release in August 2026. Two December dates are still unannounced and are not listed. What you type stays on this phone.</p>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SeatSeller</string>
+    <string name="title_activity_main">SeatSeller</string>
+    <string name="package_name">com.drgitt.seatseller</string>
+    <string name="custom_url_scheme">com.drgitt.seatseller</string>
+</resources>

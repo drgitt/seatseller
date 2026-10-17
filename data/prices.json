@@ -1,0 +1,8 @@
+{
+  "updatedAt": "2026-10-16T22:00:00-04:00",
+  "games": {
+    "g1": {"low": 29, "source": "TickPick", "checkedAt": "2026-10-16T22:00:00-04:00"},
+    "g2": {"low": 21, "source": "TickPick", "checkedAt": "2026-10-16T22:00:00-04:00"}
+  },
+  "alerts": []
+}
