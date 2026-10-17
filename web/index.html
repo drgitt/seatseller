@@ -8,11 +8,29 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
+<div id="splash" role="status" aria-label="SeatSeller is loading">
+  <svg viewBox="0 0 120 120" width="112" height="112" aria-hidden="true">
+    <rect x="12" y="30" width="96" height="60" rx="7" fill="#C8102E"/>
+    <circle cx="12" cy="60" r="9" fill="#0B1B3A"/><circle cx="108" cy="60" r="9" fill="#0B1B3A"/>
+    <g fill="#fff"><circle cx="82" cy="40" r="1.8"/><circle cx="82" cy="50" r="1.8"/><circle cx="82" cy="60" r="1.8"/><circle cx="82" cy="70" r="1.8"/><circle cx="82" cy="80" r="1.8"/></g>
+    <text x="50" y="76" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="54" fill="#fff">S</text>
+  </svg>
+  <div class="splash-word">SeatSeller</div>
+  <div class="splash-sub">Loading your seats…</div>
+</div>
+
 <div class="wrap">
   <header class="top">
-    <div>
-      <h1>SeatSeller</h1>
-      <p class="sub" id="sub">Wizards home games, nearest first.</p>
+    <div class="bar">
+      <span class="brand">SeatSeller</span>
+      <button type="button" class="gear" id="gearBtn" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+    <div class="teamsel">
+      <label for="teamSel" class="vh">Team</label>
+      <select id="teamSel"></select>
+      <p class="sub" id="sub"></p>
     </div>
     <div class="stats" id="stats"></div>
   </header>
@@ -29,18 +47,44 @@
       <button type="button" id="f-soon" aria-pressed="true">Next 3 weeks</button>
       <button type="button" id="f-all" aria-pressed="false">All home games</button>
     </div>
+    <button type="button" class="btn ghost" id="addGameBtn">+ Add games</button>
     <div class="fresh mono" id="fresh"></div>
   </div>
 
-  <details class="settings" id="settings">
-    <summary>Settings and notifications</summary>
-    <div class="settings-body">
-      <label for="face">Face value per seat ($)
-        <input id="face" type="number" inputmode="decimal" min="0" step="1" placeholder="e.g. 85">
+  <div class="note" id="note">Market low is the cheapest seat in the whole arena, so your section costs more. For a real row price, open a marketplace link on a game, filter to your section, and type the low, high and seat count here. Selling fast appears when your listed seats drop sharply in a week, the market low jumps, or a marketplace shows low inventory.</div>
+
+  <div class="list" id="list"></div>
+  <p class="foot" id="foot">What you type stays on this phone.</p>
+</div>
+
+<!-- Settings -->
+<dialog id="settingsDlg" aria-labelledby="settingsTitle">
+  <form method="dialog" class="dlg">
+    <div class="dlg-head"><h2 id="settingsTitle">Settings</h2><button class="btn ghost" value="close">Done</button></div>
+    <div class="dlg-body">
+      <h3>This team <span id="setTeamName"></span></h3>
+      <label>Venue <input id="setVenue" type="text" maxlength="60" placeholder="e.g. Capital One Arena"></label>
+      <label>My seats <input id="seatlabel" type="text" maxlength="60" placeholder="Section 109, rows E1 and E2"></label>
+      <label>Face value per seat ($) <input id="face" type="number" inputmode="decimal" min="0" step="1" placeholder="e.g. 85"></label>
+      <div class="btn-row"><button type="button" class="btn ghost" id="resetPrices">Clear prices I logged</button><button type="button" class="btn danger" id="removeTeam">Remove this team</button></div>
+
+      <h3>Look</h3>
+      <label>Theme
+        <select id="prefTheme"><option value="system">Match my phone</option><option value="light">Light</option><option value="dark">Dark</option></select>
       </label>
-      <label for="seatlabel">My seats
-        <input id="seatlabel" type="text" maxlength="40" placeholder="Section 109, rows E1 and E2">
+      <label>Highlight games within
+        <select id="prefWeeks"><option value="1">1 week</option><option value="2">2 weeks</option><option value="3">3 weeks</option></select>
       </label>
+      <label>When I open a team show
+        <select id="prefView"><option value="soon">Upcoming weeks only</option><option value="all">All home games</option></select>
+      </label>
+
+      <h3>Selling-fast rules</h3>
+      <label>Your listed seats drop by at least (%) <input id="prefDrop" type="number" inputmode="numeric" min="5" max="90" step="5"></label>
+      <label>Market low jumps by at least (%) <input id="prefJump" type="number" inputmode="numeric" min="5" max="90" step="5"></label>
+      <p class="hint">These control the red Selling fast tag in the app. Phone notifications use the alerts from the daily price check.</p>
+
+      <h3>Notifications</h3>
       <div class="notif" id="notifBox">
         <div class="notif-line" id="notifStatus">Notifications work in the installed Android app.</div>
         <div class="btn-row">
@@ -50,13 +94,49 @@
         <div class="notif-line mono" id="checkResult"></div>
       </div>
     </div>
-  </details>
+  </form>
+</dialog>
 
-  <div class="note">Market low is the cheapest seat in the whole arena, so your section costs more. For a real row price, open a marketplace link on a game, filter to your section, and type the low, high and seat count here. Selling fast appears when listed seats drop 25% or more in a week, the market low jumps 15% or more, or a marketplace shows low inventory.</div>
+<!-- Add team / venue -->
+<dialog id="teamDlg" aria-labelledby="teamTitle">
+  <form method="dialog" class="dlg" id="teamForm">
+    <div class="dlg-head"><h2 id="teamTitle">Add team / venue</h2><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+    <div class="dlg-body">
+      <label>League
+        <select id="tLeague"><option value="">Any (auto-detect)</option><option>NBA</option><option>NHL</option><option>NFL</option><option>MLB</option><option>WNBA</option><option>MLS</option><option value="Other">Other / college</option></select>
+      </label>
+      <label>Team <input id="tName" type="text" list="teamList" maxlength="60" placeholder="Start typing, e.g. Capitals" autocomplete="off" required></label>
+      <datalist id="teamList"></datalist>
+      <label>Venue <input id="tVenue" type="text" maxlength="60" placeholder="Filled in for you when found" required></label>
+      <p class="hint" id="tStatus" aria-live="polite">Pick a team and the venue fills in. If it can't be found, type it yourself.</p>
+      <label>My seats <input id="tSeats" type="text" maxlength="60" placeholder="e.g. Section 112, Row 8, seats 5-6"></label>
+      <label>Face value per seat ($), optional <input id="tFace" type="number" inputmode="decimal" min="0" step="1"></label>
+      <label>Home games, optional
+        <textarea id="tGames" rows="5" placeholder="One per line, date first:&#10;2026-11-05 Boston Bruins&#10;11/12/2026 Toronto Maple Leafs | Rivalry night"></textarea>
+      </label>
+      <div class="btn-row"><button type="submit" class="btn" id="tSave" value="save">Add team</button></div>
+    </div>
+  </form>
+</dialog>
 
-  <div class="list" id="list"></div>
-  <p class="foot">Schedule from the NBA release in August 2026. Two December dates are still unannounced and are not listed. What you type stays on this phone.</p>
-</div>
+<!-- Add games -->
+<dialog id="gameDlg" aria-labelledby="gameTitle">
+  <form method="dialog" class="dlg" id="gameForm">
+    <div class="dlg-head"><h2 id="gameTitle">Add home games</h2><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+    <div class="dlg-body">
+      <label>Date <input id="gDate" type="date"></label>
+      <label>Opponent <input id="gOpp" type="text" maxlength="60" placeholder="e.g. Boston Celtics"></label>
+      <label>Note, optional <input id="gTag" type="text" maxlength="60" placeholder="e.g. Rivalry night"></label>
+      <label>Or paste a list
+        <textarea id="gBulk" rows="5" placeholder="One per line, date first:&#10;2026-11-05 Boston Bruins&#10;11/12/2026 Toronto Maple Leafs | Rivalry night"></textarea>
+      </label>
+      <p class="hint" id="gStatus" aria-live="polite"></p>
+      <div class="btn-row"><button type="submit" class="btn" value="save">Add</button></div>
+    </div>
+  </form>
+</dialog>
+
+<script src="teams.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

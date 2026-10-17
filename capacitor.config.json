@@ -2,6 +2,6 @@
   "appId": "com.drgitt.seatseller",
   "appName": "SeatSeller",
   "webDir": "web",
-  "backgroundColor": "#EEF1F6",
+  "backgroundColor": "#0B1B3A",
   "android": { "allowMixedContent": false }
 }
