@@ -119,7 +119,9 @@ public class PriceCheckWorker extends Worker {
         SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String result;
         try {
-            JSONObject root = new JSONObject(fetch(DATA_URL));
+            String raw = fetch(DATA_URL);
+            JSONObject root = new JSONObject(raw);
+            sp.edit().putString("lastPrices", raw).apply();
             JSONObject games = root.optJSONObject("games");
             int priced = games == null ? 0 : games.length();
             JSONArray alerts = root.optJSONArray("alerts");
@@ -148,6 +150,7 @@ public class PriceCheckWorker extends Worker {
             if (msg.contains("404")) msg = "HTTP 404 (price feed not public yet)";
             result = "Failed: " + msg;
         }
+        try { WidgetProvider.update(ctx); } catch (Exception ignored) { }
         sp.edit().putLong("lastCheck", System.currentTimeMillis()).putString("lastResult", result).apply();
         return result;
     }

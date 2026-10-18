@@ -1,8 +1,95 @@
 # SeatSeller
 
-Android app that tracks resale prices near Capital One Arena section 109 (rows E1/E2) for every Wizards home game and sends notifications when it looks like time to sell.
+An Android app for season-ticket holders who want to know **when to sell**. It tracks resale prices for your seats across every home game, for more than one team and venue, and tells you what to do about each game.
 
-- `web/` – the app UI (Capacitor web assets)
-- `android/` – Android wrapper + native background price check (WorkManager) and notifications
-- `data/prices.json` – price feed updated daily; the app and background worker read it from raw.githubusercontent.com
-- Every push to `main` builds `SeatSeller.apk` via GitHub Actions and attaches it to the latest release.
+Built with Capacitor (web UI) plus native Android code for notifications, reminders, calendar, backup and the home-screen widget. Every push to `main` builds `SeatSeller.apk` in GitHub Actions and attaches it to the latest release.
+
+**Install:** open the latest release on your phone, download `SeatSeller.apk`, allow installs from your browser when Android asks, and open it. New builds install over the old one and keep your data.
+
+---
+
+## Everything the app does
+
+### Core tracking
+- **Every home game, nearest first.** Games this week, next week and the week after are enlarged and colour-coded (red, amber, blue). How many weeks to highlight is a setting.
+- **Sell button** on every game opens Ticketmaster's account page, with links to search Ticketmaster, StubHub, SeatGeek and Vivid Seats for that exact game.
+- **Prices in your section.** Type the seats listed, low and high price for your rows. The app compares your low to face value.
+- **Market low per game** (Wizards): the cheapest seat in the arena from TickPick, refreshed daily.
+- **Selling fast** tag when your listed seats drop sharply in a week, the market low jumps, or a marketplace shows low inventory. The percentages are settings.
+- **Summary tiles:** next game, games this week, selling-fast count, best logged low.
+
+### Multiple teams and venues
+- **Team pull-down** at the top lists every team you hold seats for.
+- **Add Team / Venue** at the bottom of the pull-down. Pick the league, start typing the team, and the venue fills in from a built-in list (NBA, NHL, NFL, MLB, WNBA and some MLS). If the team isn't listed it tries an online sports database, and if that finds nothing you type the venue yourself. The venue is always editable.
+- Enter your seats and optional face value, and optionally paste the home schedule (one game per line: `2026-11-05 Boston Bruins` or `11/12/2026 Toronto Maple Leafs | Rivalry night`).
+- **Add games** later, one at a time or by pasting a list. Added games can be removed.
+- Each team keeps its own seats, face value, games, prices and sales.
+
+### Settings (gear icon)
+Team venue, seats, face value, seats owned and profit-split partner; theme (phone default, light, dark); weeks to highlight; default view; sort order; selling-fast thresholds; price-spike threshold; weather flags; where you usually sell and each marketplace's fee; reminder timing; calendar; backup; notification status, test and manual price check; clear prices; remove a team.
+
+### Splash screen
+A navy ticket splash shows while the app loads and stays for at least one second. It leaves when both prices have loaded and one second has passed, whichever is slower, with an 8-second safety limit so a stalled network can't trap you.
+
+### Records and rivals
+- Each card shows **both teams' records** (for example `Wizards 12-8 · Bucks 14-6`), refreshed daily from league standings.
+- A **Division rival** tag marks games against teams in your team's division (NBA, NHL, NFL and MLB, including teams you add).
+
+### Notifications and reminders
+- **Alerts** from the daily price check arrive as phone notifications (about every 3 hours the app checks for new ones).
+- **List-by reminder:** notification N days before each game (default 3, 0 turns it off).
+- **Last call:** notification at 9 AM on game day.
+- Reminders skip games you marked sold. The schedule has no tip-off times, so they fire at 9 AM. Android may deliver them a few minutes late.
+- **Schedule-change alerts:** if a game moves, its card says "Moved from [date]" and you get a notification.
+
+### Profit, fees and tax
+- **Mark sold** on any game: seats, price per seat, marketplace and fee. Shows what you receive and your profit against face value.
+- **Seller fees:** editable fee per marketplace (Ticketmaster, StubHub, SeatGeek, Vivid Seats, TickPick, Other). Cards show what your low would net after fees. The defaults are estimates, so set your real fees.
+- **Profit screen:** season totals across all teams, net after fees, profit after face value, per-game table.
+- **Tax summary:** export a CSV of sales, fees and profit for a calendar year to Google Drive or any folder. It is a record for you and your accountant, not tax advice.
+- **Renewal planner:** per team, the season's face cost against what you sold, net cost per game you kept, and sales made below face.
+- **Sold too early or late:** log the price of the same seats a day after you sold. The app shows what you left on the table. It reminds you after 24 hours.
+- **Partner split:** name a partner and their share of profit. The profit screen shows what they're owed, and **Share summary** sends a text summary through any app.
+
+### Smart guidance
+- **Sell-or-hold advice** on every game. Inputs: your logged low (or the market low), seller fee, face value, days to the game, price trend, selling-fast signals, demand score and learned peak timing. Verdicts: Sell now, Consider selling, Hold a little, Hold, Sell or use, Last call, Use or take the loss. It always shows its reason.
+- **Demand score (0–100)** from weekend, division rivalry, notable opponents or tags, holiday dates, and both teams' records. Sort the list by demand in settings.
+- **Price-history chart** on each Wizards game: market low over time, your logged low as a dashed line, and face value as a dotted line.
+- **Best-time-to-sell learning:** once about three finished games each have a few weeks of daily prices, the Profit screen shows how many days before tip-off prices usually peak, overall and for weekend and division games. The advice then uses it. Until then it says it is still collecting.
+- **Price-spike alerts:** a red tag on any unsold game whose market low is well above its recent average or above face. The daily check also sends a notification.
+- **Weather flags:** snow, heavy rain, high wind or bitter cold forecast for a game within 16 days, from Open-Meteo. Last-call reminders mention it.
+
+### Everyday helpers
+- **List helper:** copies the game, venue, your seats, a suggested price and your break-even price to the clipboard, then opens your usual marketplace. It cannot list for you, so you paste.
+- **Calendar:** a Calendar button per game, and "Add upcoming games to my calendar" for all of them. Each is an all-day event with a list-by reminder, and running it again updates what it made. In a browser it downloads an `.ics` file instead.
+- **Home-screen widget:** long-press your home screen, add the SeatSeller widget. It shows the next game, the advice and the market low, and refreshes whenever the app or the price check runs.
+- **Backup:** Settings → Backup → choose a file in Google Drive and SeatSeller keeps it refreshed about once a day. Also Back up now and Restore from a file. Backups hold teams, prices, sales and settings.
+
+---
+
+## How the data works
+
+- `data/prices.json` is the shared feed. A scheduled task runs every morning (7:47 AM Eastern) and updates it: market lows, price history, team records, schedule changes and alerts. The app and its background check read it from `raw.githubusercontent.com`, so **this repository must stay public**.
+- Everything you type (prices, sales, teams, settings) stays on your phone and in your backup file.
+- Market lows and history are the cheapest seat in the whole arena, not your section. The tool cannot see row-level prices. Type your section's low for a true read.
+- Only Wizards games get automatic market lows, history, spike alerts and schedule-change checks. Other teams get records, rival tags, demand, advice from the numbers you log, weather, and all the money tools.
+
+## What is not included, and why
+- No automatic listing or buying: marketplaces don't offer that to individuals.
+- No live shared link with a partner: it needs accounts and a server. Share summary and backup files cover it.
+- No injury or lineup data: spike alerts say to check it yourself.
+- Game times aren't in the schedule, so reminders use 9 AM.
+
+## Repository layout
+- `web/` app UI: `index.html`, `app.js`, `app.css`, `teams.js` (venue and division table), fonts, `prices.seed.json` (offline fallback)
+- `android/` Capacitor project plus native code: `PriceCheckWorker` (background check), `SeatSellerPlugin` (bridge), `Reminders`/`ReminderReceiver`/`BootReceiver`, `CalendarSync`, `BackupHelper`, `WidgetProvider`
+- `data/prices.json` price feed
+- `.github/workflows/build-apk.yml` builds the APK on every push (data-only changes are skipped). A failed build writes its log to the `build-logs` branch.
+
+## Building locally
+```
+npm install
+npx cap sync android
+cd android && ./gradlew assembleDebug
+```
+Needs JDK 21 and the Android SDK. The debug keystore in the repo is a personal sideload key so updates install over each other, not a Play Store key.

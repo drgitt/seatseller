@@ -269,4 +269,56 @@ public class SeatSellerPlugin extends Plugin {
             call.reject("read failed: " + e.getMessage());
         }
     }
+
+    /* ---------- widget, save file, share ---------- */
+    @PluginMethod
+    public void setWidgetData(PluginCall call) {
+        sp().edit().putString("wTitle", call.getString("title", "")).putString("wSub", call.getString("sub", ""))
+                .putString("wKey", call.getString("key", "")).putString("wLow", call.getString("low", "")).apply();
+        try { WidgetProvider.update(getContext()); } catch (Exception ignored) { }
+        call.resolve();
+    }
+
+    private String pendingSaveText = "";
+
+    @PluginMethod
+    public void saveFile(PluginCall call) {
+        pendingSaveText = call.getString("text", "");
+        Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT)
+                .addCategory(Intent.CATEGORY_OPENABLE)
+                .setType(call.getString("mime", "text/plain"))
+                .putExtra(Intent.EXTRA_TITLE, call.getString("name", "SeatSeller.txt"));
+        startActivityForResult(call, i, "saveFileResult");
+    }
+
+    @ActivityCallback
+    private void saveFileResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) {
+            call.reject("cancelled");
+            return;
+        }
+        try (java.io.OutputStream os = getContext().getContentResolver().openOutputStream(result.getData().getData(), "wt")) {
+            if (os == null) throw new IllegalStateException("no stream");
+            os.write(pendingSaveText.getBytes(StandardCharsets.UTF_8));
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("save failed: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void shareText(PluginCall call) {
+        try {
+            Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, call.getString("subject", "SeatSeller"))
+                    .putExtra(Intent.EXTRA_TEXT, call.getString("text", ""));
+            Intent chooser = Intent.createChooser(send, "Share with");
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(chooser);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("share failed: " + e.getMessage());
+        }
+    }
 }

@@ -67,6 +67,9 @@
       <label>Venue <input id="setVenue" type="text" maxlength="60" placeholder="e.g. Capital One Arena"></label>
       <label>My seats <input id="seatlabel" type="text" maxlength="60" placeholder="Section 109, rows E1 and E2"></label>
       <label>Face value per seat ($) <input id="face" type="number" inputmode="decimal" min="0" step="1" placeholder="e.g. 85"></label>
+      <label>Seats I own <input id="tSeatCount" type="number" inputmode="numeric" min="1" max="20" step="1"></label>
+      <label>Split profit with (name, optional) <input id="tPartner" type="text" maxlength="40" placeholder="e.g. Chris"></label>
+      <label>Their share of profit (%) <input id="tPartnerPct" type="number" inputmode="decimal" min="0" max="100" step="1"></label>
       <div class="btn-row"><button type="button" class="btn ghost" id="resetPrices">Clear prices I logged</button><button type="button" class="btn danger" id="removeTeam">Remove this team</button></div>
 
       <h3>Look</h3>
@@ -79,6 +82,11 @@
       <label>When I open a team show
         <select id="prefView"><option value="soon">Upcoming weeks only</option><option value="all">All home games</option></select>
       </label>
+
+      <h3>Order and alerts</h3>
+      <label>Sort games by <select id="prefSort"><option value="date">Date</option><option value="demand">Demand score, highest first</option></select></label>
+      <label>Flag a price spike when the market low is this far above normal (%) <input id="prefSpike" type="number" inputmode="numeric" min="5" max="200" step="5"></label>
+      <label class="chk"><input id="prefWeather" type="checkbox"> Flag snow, heavy rain, wind or bitter cold near game day</label>
 
       <h3>Selling-fast rules</h3>
       <label>Your listed seats drop by at least (%) <input id="prefDrop" type="number" inputmode="numeric" min="5" max="90" step="5"></label>
@@ -185,6 +193,7 @@
   </form>
 </dialog>
 
+<div id="toast" class="toast" role="status" hidden></div>
 <script src="teams.js"></script>
 <script src="app.js"></script>
 </body>
