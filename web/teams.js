@@ -7,3 +7,36 @@ window.TEAM_DB = ("" +
 "WNBA|Washington Mystics|CareFirst Arena\nWNBA|New York Liberty|Barclays Center\nWNBA|Las Vegas Aces|Michelob Ultra Arena\nWNBA|Indiana Fever|Gainbridge Fieldhouse\nWNBA|Seattle Storm|Climate Pledge Arena\nWNBA|Minnesota Lynx|Target Center\nWNBA|Chicago Sky|Wintrust Arena\nWNBA|Atlanta Dream|Gateway Center Arena\nWNBA|Connecticut Sun|Mohegan Sun Arena\nWNBA|Dallas Wings|College Park Center\nWNBA|Phoenix Mercury|PHX Arena\nWNBA|Los Angeles Sparks|Crypto.com Arena\n" +
 "MLS|D.C. United|Audi Field\nMLS|Inter Miami CF|Nu Stadium\nMLS|LAFC|BMO Stadium\nMLS|LA Galaxy|Dignity Health Sports Park\nMLS|New York Red Bulls|Sports Illustrated Stadium\nMLS|New York City FC|Yankee Stadium\nMLS|Seattle Sounders FC|Lumen Field\nMLS|Atlanta United FC|Mercedes-Benz Stadium\nMLS|Philadelphia Union|Subaru Park\nMLS|Columbus Crew|ScottsMiracle-Gro Field"
 ).split("\n").map(function (l) { var p = l.split("|"); return {lg: p[0], name: p[1], venue: p[2]}; });
+
+/* Divisions (static). Same league + same division = division rival. */
+(function () {
+  var D = {
+    "NBA Atlantic": ["Boston Celtics","Brooklyn Nets","New York Knicks","Philadelphia 76ers","Toronto Raptors"],
+    "NBA Central": ["Chicago Bulls","Cleveland Cavaliers","Detroit Pistons","Indiana Pacers","Milwaukee Bucks"],
+    "NBA Southeast": ["Atlanta Hawks","Charlotte Hornets","Miami Heat","Orlando Magic","Washington Wizards"],
+    "NBA Northwest": ["Denver Nuggets","Minnesota Timberwolves","Oklahoma City Thunder","Portland Trail Blazers","Utah Jazz"],
+    "NBA Pacific": ["Golden State Warriors","LA Clippers","Los Angeles Lakers","Phoenix Suns","Sacramento Kings"],
+    "NBA Southwest": ["Dallas Mavericks","Houston Rockets","Memphis Grizzlies","New Orleans Pelicans","San Antonio Spurs"],
+    "NHL Atlantic": ["Boston Bruins","Buffalo Sabres","Detroit Red Wings","Florida Panthers","Montreal Canadiens","Ottawa Senators","Tampa Bay Lightning","Toronto Maple Leafs"],
+    "NHL Metropolitan": ["Carolina Hurricanes","Columbus Blue Jackets","New Jersey Devils","New York Islanders","New York Rangers","Philadelphia Flyers","Pittsburgh Penguins","Washington Capitals"],
+    "NHL Central": ["Chicago Blackhawks","Colorado Avalanche","Dallas Stars","Minnesota Wild","Nashville Predators","St. Louis Blues","Utah Mammoth","Winnipeg Jets"],
+    "NHL Pacific": ["Anaheim Ducks","Calgary Flames","Edmonton Oilers","Los Angeles Kings","San Jose Sharks","Seattle Kraken","Vancouver Canucks","Vegas Golden Knights"],
+    "NFL AFC East": ["Buffalo Bills","Miami Dolphins","New England Patriots","New York Jets"],
+    "NFL AFC North": ["Baltimore Ravens","Cincinnati Bengals","Cleveland Browns","Pittsburgh Steelers"],
+    "NFL AFC South": ["Houston Texans","Indianapolis Colts","Jacksonville Jaguars","Tennessee Titans"],
+    "NFL AFC West": ["Denver Broncos","Kansas City Chiefs","Las Vegas Raiders","Los Angeles Chargers"],
+    "NFL NFC East": ["Dallas Cowboys","New York Giants","Philadelphia Eagles","Washington Commanders"],
+    "NFL NFC North": ["Chicago Bears","Detroit Lions","Green Bay Packers","Minnesota Vikings"],
+    "NFL NFC South": ["Atlanta Falcons","Carolina Panthers","New Orleans Saints","Tampa Bay Buccaneers"],
+    "NFL NFC West": ["Arizona Cardinals","Los Angeles Rams","San Francisco 49ers","Seattle Seahawks"],
+    "MLB AL East": ["Baltimore Orioles","Boston Red Sox","New York Yankees","Tampa Bay Rays","Toronto Blue Jays"],
+    "MLB AL Central": ["Chicago White Sox","Cleveland Guardians","Detroit Tigers","Kansas City Royals","Minnesota Twins"],
+    "MLB AL West": ["Athletics","Houston Astros","Los Angeles Angels","Seattle Mariners","Texas Rangers"],
+    "MLB NL East": ["Atlanta Braves","Miami Marlins","New York Mets","Philadelphia Phillies","Washington Nationals"],
+    "MLB NL Central": ["Chicago Cubs","Cincinnati Reds","Milwaukee Brewers","Pittsburgh Pirates","St. Louis Cardinals"],
+    "MLB NL West": ["Arizona Diamondbacks","Colorado Rockies","Los Angeles Dodgers","San Diego Padres","San Francisco Giants"]
+  };
+  var byName = {};
+  window.TEAM_DB.forEach(function (t) { byName[t.name] = t; });
+  Object.keys(D).forEach(function (k) { D[k].forEach(function (n) { if (byName[n]) byName[n].div = k; }); });
+})();

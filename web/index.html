@@ -48,6 +48,7 @@
       <button type="button" id="f-all" aria-pressed="false">All home games</button>
     </div>
     <button type="button" class="btn ghost" id="addGameBtn">+ Add games</button>
+    <button type="button" class="btn ghost" id="profitBtn">Profit</button>
     <div class="fresh mono" id="fresh"></div>
   </div>
 
@@ -84,6 +85,30 @@
       <label>Market low jumps by at least (%) <input id="prefJump" type="number" inputmode="numeric" min="5" max="90" step="5"></label>
       <p class="hint">These control the red Selling fast tag in the app. Phone notifications use the alerts from the daily price check.</p>
 
+      <h3>Seller fees</h3>
+      <label>Where I usually sell <select id="prefUsual"></select></label>
+      <div class="feegrid" id="feeGrid"></div>
+      <p class="hint">Estimates only. Each marketplace sets its own seller fee and changes it, so check yours and edit these numbers. They drive the "nets about" amounts and your profit totals.</p>
+
+      <h3>Reminders</h3>
+      <label>Remind me to list this many days before a game (0 = off) <input id="prefListDays" type="number" inputmode="numeric" min="0" max="30" step="1"></label>
+      <label class="chk"><input id="prefLastCall" type="checkbox"> Last call reminder at 9 AM on game day</label>
+      <p class="hint">Reminders skip games you marked sold. Game times aren't in the schedule, so they fire at 9 AM. Android may deliver them a few minutes late.</p>
+
+      <h3>Calendar</h3>
+      <div class="btn-row"><button type="button" class="btn" id="calAll">Add upcoming games to my calendar</button></div>
+      <p class="hint" id="calStatus">Adds an all-day event for each upcoming game with a list-by reminder. Run it again after you add games and it updates what it made.</p>
+
+      <h3>Backup</h3>
+      <p class="hint" id="bkStatus">Backups save your teams, prices, sales and settings.</p>
+      <div class="btn-row">
+        <button type="button" class="btn" id="bkChoose">Choose where to save (Google Drive)</button>
+        <button type="button" class="btn ghost" id="bkNow">Back up now</button>
+        <button type="button" class="btn ghost" id="bkRestore">Restore from a file</button>
+        <button type="button" class="btn ghost" id="bkStop" hidden>Stop auto-backup</button>
+      </div>
+      <input type="file" id="bkFile" accept="application/json,.json" hidden>
+
       <h3>Notifications</h3>
       <div class="notif" id="notifBox">
         <div class="notif-line" id="notifStatus">Notifications work in the installed Android app.</div>
@@ -94,6 +119,30 @@
         <div class="notif-line mono" id="checkResult"></div>
       </div>
     </div>
+  </form>
+</dialog>
+
+<!-- Mark sold -->
+<dialog id="soldDlg" aria-labelledby="soldTitle">
+  <form method="dialog" class="dlg" id="soldForm">
+    <div class="dlg-head"><h2 id="soldTitle">Mark sold</h2><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+    <div class="dlg-body">
+      <p class="hint" id="soldGame"></p>
+      <label>Seats sold <input id="sN" type="number" inputmode="numeric" min="1" step="1" required></label>
+      <label>Price per seat ($) <input id="sPrice" type="number" inputmode="decimal" min="0" step="0.01" required></label>
+      <label>Sold on <select id="sMk"></select></label>
+      <label>Fee % <input id="sFee" type="number" inputmode="decimal" min="0" max="60" step="0.5"></label>
+      <p class="hint" id="sNet"></p>
+      <div class="btn-row"><button type="submit" class="btn" value="save">Save sale</button><button type="button" class="btn danger" id="sRemove">Remove sale</button></div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Profit -->
+<dialog id="profitDlg" aria-labelledby="profitTitle">
+  <form method="dialog" class="dlg">
+    <div class="dlg-head"><h2 id="profitTitle">Season profit</h2><button class="btn ghost" value="close">Done</button></div>
+    <div class="dlg-body" id="profitBody"></div>
   </form>
 </dialog>
 

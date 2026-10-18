@@ -24,7 +24,9 @@
 
 
   var WIZ = {id: "wiz", name: "Washington Wizards", league: "NBA", venue: "Capital One Arena", seats: "Section 109, rows E1 and E2", face: "", builtin: true, games: []};
-  var state = {v: 2, active: "wiz", all: false, teams: [WIZ], prices: {}, prefs: {theme: "system", weeks: 3, view: "soon", drop: 25, jump: 15}};
+  var MKTS = [["TM","Ticketmaster",15],["SH","StubHub",10],["SG","SeatGeek",10],["VS","Vivid Seats",10],["TP","TickPick",10],["OT","Other",10]];
+  var state = {v: 2, active: "wiz", all: false, teams: [WIZ], prices: {}, sales: {}, prefs: {theme: "system", weeks: 3, view: "soon", drop: 25, jump: 15, usual: "SH", listDays: 3, lastCall: true, fees: {TM: 15, SH: 10, SG: 10, VS: 10, TP: 10, OT: 10}}};
+  var RECORDS = {}, SCHED = {};
   var MARKET = {}, ALERTS = [], UPDATED = null, FETCH_NOTE = "";
   var Native = null;
 
@@ -38,8 +40,9 @@
     var s = null;
     try { s = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
     if (s && s.teams && s.teams.length) {
-      state.teams = s.teams; state.active = s.active || s.teams[0].id; state.all = !!s.all; state.prices = s.prices || {};
-      for (var k in state.prefs) if (s.prefs && s.prefs[k] != null) state.prefs[k] = s.prefs[k];
+      state.teams = s.teams; state.active = s.active || s.teams[0].id; state.all = !!s.all; state.prices = s.prices || {}; state.sales = s.sales || {};
+      for (var k in state.prefs) if (k !== "fees" && s.prefs && s.prefs[k] != null) state.prefs[k] = s.prefs[k];
+      if (s.prefs && s.prefs.fees) for (var m in s.prefs.fees) state.prefs.fees[m] = s.prefs.fees[m];
     } else {
       try {
         var o = JSON.parse(localStorage.getItem(OLDKEY) || "null");
@@ -50,8 +53,21 @@
     if (!state.teams.some(function (t) { return t.id === state.active; })) state.active = state.teams[0].id;
     try { var p = JSON.parse(localStorage.getItem(PKEY) || "null"); if (p) applyPrices(p); } catch (e) {}
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
-  function applyPrices(p) { MARKET = (p && p.games) || {}; ALERTS = (p && p.alerts) || []; UPDATED = (p && p.updatedAt) || null; }
+  var pushT = null;
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+    clearTimeout(pushT); pushT = setTimeout(afterSave, 900);
+  }
+  function afterSave() {
+    if (!Native) return;
+    try { Native.setBackupData({json: backupJSON()}); } catch (e) {}
+    syncReminders();
+  }
+  function backupJSON() { return JSON.stringify({app: "SeatSeller", version: 1, exportedAt: new Date().toISOString(), state: state}); }
+  function applyPrices(p) {
+    MARKET = (p && p.games) || {}; ALERTS = (p && p.alerts) || []; UPDATED = (p && p.updatedAt) || null; RECORDS = (p && p.records) || {};
+    SCHED = {}; ((p && p.scheduleChanges) || []).forEach(function (c) { if (c && c.game != null && c.to) SCHED["g" + c.game] = c; });
+  }
 
   function $(id) { return document.getElementById(id); }
   function today() { var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
@@ -75,9 +91,23 @@
   function prices() { return state.prices[state.active] || (state.prices[state.active] = {}); }
   function games(t) {
     t = t || team();
-    var list = t.id === "wiz" ? GAMES.map(function (G) { return {id: G[0], date: G[1], opp: TEAMS[G[2]], short: G[2], tag: G[3], builtin: true}; }) : [];
+    var list = t.id === "wiz" ? GAMES.map(function (G) { var c = SCHED["g" + G[0]]; return {id: G[0], date: c ? c.to : G[1], was: c ? G[1] : null, opp: TEAMS[G[2]], short: G[2], tag: G[3], builtin: true}; }) : [];
     (t.games || []).forEach(function (g) { list.push({id: g.id, date: g.date, opp: g.opp, tag: g.tag || "", builtin: false}); });
     return list.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  }
+  var NICK2 = ["Trail Blazers","Red Sox","White Sox","Blue Jays","Red Wings","Blue Jackets","Maple Leafs","Golden Knights"];
+  function nick(n) { n = String(n || ""); for (var i = 0; i < NICK2.length; i++) if (n.slice(-NICK2[i].length) === NICK2[i]) return NICK2[i]; return n.split(" ").pop(); }
+  function dbTeam(name, lg) { var c = candidates(name, lg); return c.length === 1 ? c[0] : null; }
+  function isDivRival(T, G) {
+    var a = dbTeam(T.name, T.league), b = dbTeam(G.opp, T.league || (a && a.lg));
+    return !!(a && b && a.div && a.div === b.div && a.name !== b.name);
+  }
+  function fee(mk) { var f = parseFloat(state.prefs.fees[mk]); return isNaN(f) ? 10 : f; }
+  function net(price, mk) { return price * (1 - fee(mk) / 100); }
+  function mkName(k) { for (var i = 0; i < MKTS.length; i++) if (MKTS[i][0] === k) return MKTS[i][1]; return k; }
+  function recText(T, G) {
+    var a = RECORDS[T.name], b = RECORDS[G.opp];
+    return nick(T.name) + " " + (a || "—") + " · " + nick(G.opp) + " " + (b || "—");
   }
   function marketFor(G) { return team().id === "wiz" && G.builtin ? MARKET["g" + G.id] : null; }
 
@@ -130,14 +160,18 @@
     var cls = "game" + (hot ? " t" + t : "");
     var pills = "";
     if (hot) pills += '<span class="pill ' + TIERNAME[t][1] + '">' + TIERNAME[t][0] + '</span><span class="pill ' + TIERNAME[t][1] + '">' + whenLabel(n) + '</span>';
+    if (isDivRival(T, G)) pills += '<span class="pill div">Division rival</span>';
+    if (G.was) pills += '<span class="pill warm">Moved from ' + fmtDay(parse(G.was).getTime()) + '</span>';
+    var sale = (state.sales[T.id] || {})[g];
+    pills += '<span class="pill good" id="sold-' + g + '"' + (sale ? '' : ' hidden') + '>' + (sale ? saleText(sale) : '') + '</span>';
     pills += '<span class="pill hot" id="fast-' + g + '" hidden></span>';
     pills += '<span class="pill ' + sig[1] + '" id="sig-' + g + '">' + sig[0] + '</span>';
-    pills += '<span class="mk" id="mk-' + g + '"></span><span class="mk" id="sd-' + g + '"></span>';
+    pills += '<span class="mk" id="mk-' + g + '"></span><span class="mk" id="sd-' + g + '"></span><span class="mk" id="nt-' + g + '"></span>';
     var tag = G.tag ? '<span>' + esc(G.tag) + '</span>' : '';
     var idl = G.builtin ? '<span class="mono">G' + g + '</span>' : '<button type="button" class="x" data-del="' + esc(g) + '" aria-label="Remove game vs ' + esc(name) + '">Remove</button>';
     return '<div class="' + cls + '" id="g' + g + '">' +
       '<div class="date"><span class="dow">' + DOW[d.getDay()] + '</span><span class="dnum">' + d.getDate() + '</span></div>' +
-      '<div class="who"><div class="opp">vs ' + esc(name) + '</div><div class="meta">' + pills + tag + idl + '</div></div>' +
+      '<div class="who"><div class="opp">vs ' + esc(name) + '</div><div class="rec" id="rec-' + g + '">' + esc(recText(T, G)) + '</div><div class="meta">' + pills + tag + idl + '</div></div>' +
       '<div class="act"><div class="prices">' +
         '<input type="number" inputmode="numeric" min="0" step="1" id="se-' + g + '" data-g="' + esc(g) + '" data-k="seats" placeholder="Seats" aria-label="Seats listed in my section for ' + esc(name) + '" value="' + (p.seats || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" id="lo-' + g + '" data-g="' + esc(g) + '" data-k="lo" placeholder="Low $" aria-label="Lowest price in my rows for ' + esc(name) + '" value="' + (p.lo || "") + '">' +
@@ -148,9 +182,18 @@
         '<a href="https://www.stubhub.com/find/s/?q=' + enc(q) + '" target="_blank" rel="noopener">StubHub</a>' +
         '<a href="https://seatgeek.com/search?search=' + enc(q) + '" target="_blank" rel="noopener">SeatGeek</a>' +
         '<a href="https://www.vividseats.com/search?searchTerm=' + enc(q) + '" target="_blank" rel="noopener">Vivid Seats</a>' +
+        '<button type="button" class="lb" data-sold="' + esc(g) + '">' + (sale ? 'Edit sale' : 'Mark sold') + '</button>' +
+        '<button type="button" class="lb" data-cal="' + esc(g) + '">Calendar</button>' +
       '</div></div>';
   }
 
+  function saleText(x) { return "Sold " + x.n + " × " + money(x.price) + " · net " + money(Math.round(x.n * net(x.price, x.mk) * 100) / 100) + " after " + mkName(x.mk); }
+  function paintNet(G) {
+    var el = $("nt-" + G.id); if (!el) return;
+    var p = prices()[G.id] || {}, lo = parseFloat(p.lo), parts = [], mk = state.prefs.usual;
+    if (!isNaN(lo) && lo > 0) parts.push("your low nets ≈ " + money(Math.round(net(lo, mk))) + " on " + mkName(mk) + " (" + fee(mk) + "% fee)");
+    el.textContent = parts.join(" · ");
+  }
   function paintFast(G) {
     var g = G.id, el = $("fast-" + g), sd = $("sd-" + g); if (!el || !sd) return;
     var why = fastInfo(G);
@@ -165,12 +208,12 @@
 
   function paintMarkets() {
     games().forEach(function (G) {
-      paintFast(G);
+      paintFast(G); paintNet(G);
       var el = $("mk-" + G.id); if (!el) return;
       var m = marketFor(G);
       if (m && m.low != null) {
         var dt = m.checkedAt ? new Date(m.checkedAt) : null;
-        el.textContent = "Market low " + money(m.low) + (m.source ? " · " + m.source : "") + (m.listings ? " · " + m.listings + " listings" : "") + (dt && !isNaN(dt) ? " · " + fmtDay(dt.getTime()) : "");
+        el.textContent = "Market low " + money(m.low) + (m.source ? " · " + m.source : "") + (m.listings ? " · " + m.listings + " listings" : "") + (dt && !isNaN(dt) ? " · " + fmtDay(dt.getTime()) : "") + " · nets ≈ " + money(Math.round(net(m.low, state.prefs.usual)));
       } else { el.textContent = ""; }
     });
   }
@@ -253,7 +296,7 @@
     return fetchJSON(DATA_URL + "?t=" + Date.now()).then(function (p) {
       applyPrices(p); FETCH_NOTE = "";
       try { localStorage.setItem(PKEY, JSON.stringify(p)); } catch (e) {}
-      render();
+      render(); syncReminders();
     }).catch(function (e) {
       FETCH_NOTE = e && e.status === 404 ? "price feed not reachable (repo may be private)" : "offline, showing saved prices";
       if (!UPDATED) {
@@ -334,6 +377,9 @@
     $("setVenue").value = T.venue || ""; $("seatlabel").value = T.seats || ""; $("face").value = T.face || "";
     $("prefTheme").value = state.prefs.theme; $("prefWeeks").value = String(weeks()); $("prefView").value = state.prefs.view;
     $("prefDrop").value = state.prefs.drop; $("prefJump").value = state.prefs.jump;
+    $("prefUsual").value = state.prefs.usual; $("prefListDays").value = state.prefs.listDays; $("prefLastCall").checked = !!state.prefs.lastCall;
+    [].forEach.call(document.querySelectorAll("[data-fee]"), function (i) { i.value = state.prefs.fees[i.dataset.fee]; });
+    paintBackup();
     $("removeTeam").disabled = state.teams.length < 2;
     paintNative(); openDlg($("settingsDlg"));
   }
@@ -413,6 +459,8 @@
     $("list").addEventListener("click", function (e) {
       var el = e.target;
       if (el.dataset && el.dataset.act === "addgames") { openGameDlg(); return; }
+      if (el.dataset && el.dataset.sold) { openSold(el.dataset.sold); return; }
+      if (el.dataset && el.dataset.cal) { calendarOne(el.dataset.cal); return; }
       if (el.dataset && el.dataset.del) {
         if (!confirm("Remove this game?")) return;
         var T = team(); T.games = (T.games || []).filter(function (g) { return g.id !== el.dataset.del; });
@@ -423,6 +471,7 @@
       var el = e.target; if (!el.dataset || !el.dataset.g) return;
       var g = el.dataset.g, P = prices(); P[g] = P[g] || {}; P[g][el.dataset.k] = el.value; save();
       var sg = signal(g), pill = $("sig-" + g); if (pill) { pill.textContent = sg[0]; pill.className = "pill " + sg[1]; }
+      var G0 = games().filter(function (x) { return String(x.id) === g; })[0]; if (G0) paintNet(G0);
       stats();
     });
     $("list").addEventListener("change", function (e) {
@@ -436,6 +485,162 @@
     });
   }
 
+  /* ---------- sales, profit ---------- */
+  var soldGame = null;
+  function gameById(g) { return games().filter(function (x) { return String(x.id) === String(g); })[0]; }
+  function sNetText() {
+    var n = parseFloat($("sN").value), p = parseFloat($("sPrice").value), f = parseFloat($("sFee").value);
+    if (isNaN(n) || isNaN(p)) { $("sNet").textContent = ""; return; }
+    f = isNaN(f) ? 0 : f; var each = p * (1 - f / 100), face = parseFloat(team().face);
+    var t = "You receive about " + money(Math.round(each * 100) / 100) + " per seat, " + money(Math.round(each * n * 100) / 100) + " total.";
+    if (!isNaN(face) && face > 0) { var pr = (each - face) * n; t += " Profit vs face: " + (pr < 0 ? "−" : "") + money(Math.abs(Math.round(pr * 100) / 100)) + "."; }
+    $("sNet").textContent = t;
+  }
+  function openSold(g) {
+    var G = gameById(g); if (!G) return; soldGame = String(g);
+    var x = (state.sales[state.active] || {})[g], p = prices()[g] || {};
+    $("soldTitle").textContent = x ? "Edit sale" : "Mark sold";
+    $("soldGame").textContent = team().name + " vs " + G.opp + " · " + fmtDay(parse(G.date).getTime());
+    $("sN").value = x ? x.n : (p.seats ? "" : 2); $("sPrice").value = x ? x.price : (p.lo || "");
+    $("sMk").value = x ? x.mk : state.prefs.usual; $("sFee").value = x ? x.fee : fee($("sMk").value);
+    $("sRemove").hidden = !x; sNetText(); openDlg($("soldDlg"));
+  }
+  function profitHTML() {
+    var rows = [], tot = {n: 0, gross: 0, net: 0, face: 0, hasFace: true};
+    state.teams.forEach(function (T) {
+      var S = state.sales[T.id] || {}, f = parseFloat(T.face), id;
+      for (id in S) {
+        var x = S[id], G = games(T).filter(function (q) { return String(q.id) === id; })[0];
+        var gross = x.n * x.price, nt = x.n * x.price * (1 - (x.fee != null ? x.fee : fee(x.mk)) / 100);
+        var face = isNaN(f) ? null : f * x.n;
+        rows.push({date: G ? G.date : "", label: nick(T.name) + " vs " + (G ? G.opp : "game"), n: x.n, gross: gross, net: nt, profit: face == null ? null : nt - face});
+        tot.n += x.n; tot.gross += gross; tot.net += nt; if (face == null) tot.hasFace = false; else tot.face += face;
+      }
+    });
+    if (!rows.length) return '<p class="hint">Nothing sold yet. Use Mark sold on a game card and your totals show up here.</p>';
+    rows.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var profit = tot.net - tot.face, r2 = function (v) { return Math.round(v * 100) / 100; };
+    var h = '<div class="big ' + (profit >= 0 ? "pos" : "neg") + '">' + (tot.hasFace ? (profit < 0 ? "−" : "") + money(Math.abs(r2(profit))) : money(r2(tot.net))) + '</div>';
+    h += '<p class="hint">' + (tot.hasFace ? "Profit after fees and face value" : "Net after fees. Set a face value in settings to see profit") + ' · ' + tot.n + ' seats sold · gross ' + money(r2(tot.gross)) + ' · fees ' + money(r2(tot.gross - tot.net)) + '</p>';
+    h += '<table class="ptable"><tr><th>Game</th><th>Seats</th><th>Net</th><th>Profit</th></tr>';
+    rows.forEach(function (r) { h += '<tr><td>' + esc(r.label) + '</td><td>' + r.n + '</td><td>' + money(r2(r.net)) + '</td><td>' + (r.profit == null ? "—" : (r.profit < 0 ? "−" : "") + money(Math.abs(r2(r.profit)))) + '</td></tr>'; });
+    return h + '</table>';
+  }
+
+  /* ---------- reminders, calendar ---------- */
+  function upcomingAll() {
+    var out = [];
+    state.teams.forEach(function (T) {
+      var S = state.sales[T.id] || {};
+      games(T).forEach(function (G) { if (daysAway(G.date) >= 0) out.push({T: T, G: G, sold: !!S[G.id]}); });
+    });
+    return out.sort(function (a, b) { return a.G.date < b.G.date ? -1 : 1; });
+  }
+  function syncReminders() {
+    if (!Native || !Native.syncReminders) return;
+    var items = [], now = Date.now(), ld = Math.max(0, +state.prefs.listDays || 0);
+    upcomingAll().forEach(function (u) {
+      if (u.sold) return;
+      var d = parse(u.G.date), label = nick(u.T.name) + " vs " + u.G.opp;
+      if (ld > 0) { var a = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ld, 9, 0).getTime(); if (a > now) items.push({id: "l-" + u.T.id + "-" + u.G.id, at: a, title: "List by now: " + label, body: "Game is in " + ld + " day" + (ld > 1 ? "s" : "") + ". Check prices and list your seats if you plan to sell."}); }
+      if (state.prefs.lastCall) { var b = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0).getTime(); if (b > now) items.push({id: "z-" + u.T.id + "-" + u.G.id, at: b, title: "Last call: " + label + " is today", body: "Last chance to list or transfer your seats."}); }
+    });
+    items.sort(function (a, b) { return a.at - b.at; });
+    try { Native.syncReminders({items: items.slice(0, 60)}); } catch (e) {}
+  }
+  function ymdUTC(iso, plus) { var p = iso.split("-"), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + (plus || 0))); return d.getUTCFullYear() + ("0" + (d.getUTCMonth() + 1)).slice(-2) + ("0" + d.getUTCDate()).slice(-2); }
+  function icsEscape(t) { return String(t).replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\n/g, "\\n"); }
+  function icsFor(list) {
+    var ld = Math.max(0, +state.prefs.listDays || 0);
+    var L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//SeatSeller//EN"];
+    list.forEach(function (e) {
+      L.push("BEGIN:VEVENT", "UID:" + e.key + "@seatseller", "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z",
+        "DTSTART;VALUE=DATE:" + ymdUTC(e.date), "DTEND;VALUE=DATE:" + ymdUTC(e.date, 1), "SUMMARY:" + icsEscape(e.title), "LOCATION:" + icsEscape(e.location || ""), "DESCRIPTION:" + icsEscape(e.desc || ""));
+      if (ld > 0) L.push("BEGIN:VALARM", "TRIGGER:-PT" + (ld * 1440 - 540) + "M", "ACTION:DISPLAY", "DESCRIPTION:List your seats", "END:VALARM");
+      L.push("END:VEVENT");
+    });
+    L.push("END:VCALENDAR"); return L.join("\r\n");
+  }
+  function downloadText(name, mime, text) {
+    var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type: mime})); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+  function calEvent(T, G) {
+    var ld = Math.max(0, +state.prefs.listDays || 0);
+    return {key: T.id + "-" + G.id, title: nick(T.name) + " vs " + G.opp, date: G.date, location: T.venue || "", remind: ld > 0 ? ld * 1440 - 540 : 0,
+      desc: (T.seats ? "My seats: " + T.seats + ". " : "") + (ld > 0 ? "List by " + ld + " day" + (ld > 1 ? "s" : "") + " before. " : "") + (G.tag || "")};
+  }
+  function calendarOne(g) {
+    var G = gameById(g); if (!G) return; var e = calEvent(team(), G);
+    if (Native && Native.addToCalendarIntent) Native.addToCalendarIntent(e).catch(function () {});
+    else downloadText("SeatSeller-" + e.key + ".ics", "text/calendar", icsFor([e]));
+  }
+  function calendarAll() {
+    var list = upcomingAll().map(function (u) { return calEvent(u.T, u.G); });
+    if (!list.length) { $("calStatus").textContent = "No upcoming games to add yet."; return; }
+    if (Native && Native.syncCalendar) {
+      $("calStatus").textContent = "Adding " + list.length + " games…";
+      Native.syncCalendar({events: list}).then(function (r) {
+        $("calStatus").textContent = r.error ? r.error : "Calendar updated: " + r.added + " added, " + r.updated + " updated, " + r.removed + " removed.";
+      }).catch(function (e) { $("calStatus").textContent = "Couldn't reach the calendar. Allow calendar access when Android asks and try again."; });
+    } else { downloadText("SeatSeller-games.ics", "text/calendar", icsFor(list)); $("calStatus").textContent = "Downloaded a calendar file with " + list.length + " games."; }
+  }
+
+  /* ---------- backup ---------- */
+  function paintBackup() {
+    var st = $("bkStatus");
+    if (!Native || !Native.getBackupStatus) { st.textContent = "Backups save your teams, prices, sales and settings as a file. Download one now, or install the Android app for automatic daily backups to Google Drive."; $("bkChoose").hidden = true; $("bkNow").textContent = "Download backup"; return; }
+    Native.getBackupStatus().then(function (b) {
+      $("bkStop").hidden = !b.configured; $("bkNow").disabled = !b.configured;
+      $("bkChoose").textContent = b.configured ? "Change backup location" : "Choose where to save (Google Drive)";
+      st.textContent = b.configured ? "Auto-backup is on" + (b.lastBackup ? ". Last saved " + fmtTime(b.lastBackup) : "") + (b.lastResult ? " · " + b.lastResult : "") + "." : "Auto-backup is off. Choose a file in Google Drive and SeatSeller will refresh it about once a day.";
+    }).catch(function () {});
+  }
+  function restoreFrom(text) {
+    var o; try { o = JSON.parse(text); } catch (e) { return alert("That file isn't a SeatSeller backup."); }
+    var s = o && o.state; if (!o || o.app !== "SeatSeller" || !s || !s.teams || !s.teams.length) return alert("That file isn't a SeatSeller backup.");
+    if (!confirm("Replace what's on this phone with the backup from " + (o.exportedAt ? fmtTime(new Date(o.exportedAt).getTime()) : "that file") + "?")) return;
+    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+    location.reload();
+  }
+
+  function wire2() {
+    // settings extras
+    $("prefUsual").innerHTML = MKTS.map(function (m) { return '<option value="' + m[0] + '">' + m[1] + '</option>'; }).join("");
+    $("feeGrid").innerHTML = MKTS.map(function (m) { return '<label>' + m[1] + ' fee %<input type="number" inputmode="decimal" min="0" max="60" step="0.5" data-fee="' + m[0] + '"></label>'; }).join("");
+    $("sMk").innerHTML = $("prefUsual").innerHTML;
+    $("prefUsual").addEventListener("change", function (e) { state.prefs.usual = e.target.value; save(); paintMarkets(); });
+    $("feeGrid").addEventListener("change", function (e) { var k = e.target.dataset.fee; if (!k) return; var v = Math.min(60, Math.max(0, parseFloat(e.target.value) || 0)); e.target.value = v; state.prefs.fees[k] = v; save(); paintMarkets(); });
+    $("prefListDays").addEventListener("change", function (e) { state.prefs.listDays = Math.min(30, Math.max(0, parseInt(e.target.value, 10) || 0)); e.target.value = state.prefs.listDays; save(); });
+    $("prefLastCall").addEventListener("change", function (e) { state.prefs.lastCall = e.target.checked; save(); });
+    $("calAll").addEventListener("click", calendarAll);
+    // profit
+    $("profitBtn").addEventListener("click", function () { $("profitBody").innerHTML = profitHTML(); openDlg($("profitDlg")); });
+    // sold
+    $("sMk").addEventListener("change", function () { $("sFee").value = fee($("sMk").value); sNetText(); });
+    ["sN", "sPrice", "sFee"].forEach(function (id) { $(id).addEventListener("input", sNetText); });
+    $("soldForm").addEventListener("submit", function (e) {
+      if (e.submitter && e.submitter.value !== "save") return;
+      var n = parseInt($("sN").value, 10), p = parseFloat($("sPrice").value);
+      if (!(n > 0) || isNaN(p)) { e.preventDefault(); return; }
+      (state.sales[state.active] = state.sales[state.active] || {})[soldGame] = {n: n, price: p, mk: $("sMk").value, fee: parseFloat($("sFee").value) || 0, at: Date.now()};
+      save(); render();
+    });
+    $("sRemove").addEventListener("click", function () { delete (state.sales[state.active] || {})[soldGame]; save(); closeDlg($("soldDlg")); render(); });
+    // backup
+    $("bkChoose").addEventListener("click", function () { Native.chooseBackupFile({json: backupJSON()}).then(paintBackup).catch(function () { $("bkStatus").textContent = "That location didn't work. Pick a folder you can write to, like My Drive."; }); });
+    $("bkNow").addEventListener("click", function () {
+      if (Native && Native.backupNow) { Native.setBackupData({json: backupJSON()}).then(function () { return Native.backupNow(); }).then(paintBackup).catch(paintBackup); }
+      else downloadText("SeatSeller-backup.json", "application/json", backupJSON());
+    });
+    $("bkStop").addEventListener("click", function () { Native.stopBackup().then(paintBackup); });
+    $("bkRestore").addEventListener("click", function () {
+      if (Native && Native.restoreFromFile) Native.restoreFromFile().then(function (r) { if (r && r.json) restoreFrom(r.json); }).catch(function () {});
+      else $("bkFile").click();
+    });
+    $("bkFile").addEventListener("change", function (e) { var f = e.target.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { restoreFrom(String(r.result)); }; r.readAsText(f); });
+  }
+
   /* ---------- splash: hide when loaded AND at least 1 second, whichever is slower ---------- */
   function splashGate(loaded) {
     var splash = $("splash"), done = false;
@@ -446,6 +651,6 @@
     setTimeout(hide, MAX_SPLASH); // safety so a stalled network can never trap you on the splash
   }
 
-  load(); wire(); render(); wireNative();
+  load(); wire(); wire2(); render(); wireNative(); if (Native) { try { Native.setBackupData({json: backupJSON()}); } catch (e) {} syncReminders(); }
   splashGate(loadPrices());
 })();

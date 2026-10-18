@@ -46,6 +46,7 @@ public class PriceCheckWorker extends Worker {
     @Override
     public Result doWork() {
         String r = check(getApplicationContext());
+        BackupHelper.maybeBackup(getApplicationContext());
         return r.startsWith("Failed") ? Result.retry() : Result.success();
     }
 
