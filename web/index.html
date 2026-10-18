@@ -40,6 +40,8 @@
     <button type="button" id="permBtn" class="btn">Turn on</button>
   </div>
 
+  <div class="banner" id="staleBanner" hidden></div>
+
   <section class="alerts" id="alerts" hidden aria-label="Recent alerts"></section>
 
   <div class="controls">
@@ -48,6 +50,8 @@
       <button type="button" id="f-all" aria-pressed="false">All home games</button>
     </div>
     <button type="button" class="btn ghost" id="addGameBtn">+ Add games</button>
+    <button type="button" class="btn ghost" id="weeklyBtn">Weekly check</button>
+    <button type="button" class="btn ghost" id="queueBtn">Sell queue</button>
     <button type="button" class="btn ghost" id="profitBtn">Profit</button>
     <div class="fresh mono" id="fresh"></div>
   </div>
@@ -88,6 +92,11 @@
       <label>Flag a price spike when the market low is this far above normal (%) <input id="prefSpike" type="number" inputmode="numeric" min="5" max="200" step="5"></label>
       <label class="chk"><input id="prefWeather" type="checkbox"> Flag snow, heavy rain, wind or bitter cold near game day</label>
 
+      <label>Profit target over face value (%) <input id="prefTarget" type="number" inputmode="numeric" min="0" max="500" step="5"></label>
+      <label class="chk"><input id="prefDigest" type="checkbox"> One daily digest notification instead of separate alerts</label>
+      <label>Send the digest after (hour, 0-23) <input id="prefDigestHour" type="number" inputmode="numeric" min="0" max="23" step="1"></label>
+      <div class="btn-row"><button type="button" class="btn ghost" id="digestNowBtn">Send digest now</button></div>
+
       <h3>Selling-fast rules</h3>
       <label>Your listed seats drop by at least (%) <input id="prefDrop" type="number" inputmode="numeric" min="5" max="90" step="5"></label>
       <label>Market low jumps by at least (%) <input id="prefJump" type="number" inputmode="numeric" min="5" max="90" step="5"></label>
@@ -123,8 +132,10 @@
         <div class="btn-row">
           <button type="button" class="btn" id="testBtn">Send test</button>
           <button type="button" class="btn" id="checkBtn">Check prices now</button>
+          <button type="button" class="btn ghost" id="selfTestBtn">Run self-test</button>
         </div>
         <div class="notif-line mono" id="checkResult"></div>
+        <ul class="testout" id="testOut"></ul>
       </div>
     </div>
   </form>
@@ -140,8 +151,49 @@
       <label>Price per seat ($) <input id="sPrice" type="number" inputmode="decimal" min="0" step="0.01" required></label>
       <label>Sold on <select id="sMk"></select></label>
       <label>Fee % <input id="sFee" type="number" inputmode="decimal" min="0" max="60" step="0.5"></label>
+      <label>Actual payout received, total ($, optional) <input id="sPayout" type="number" inputmode="decimal" min="0" step="0.01"></label>
+      <p class="hint">Enter what Ticketmaster really paid you and the app learns the true fee for future estimates.</p>
       <p class="hint" id="sNet"></p>
       <div class="btn-row"><button type="submit" class="btn" value="save">Save sale</button><button type="button" class="btn danger" id="sRemove">Remove sale</button></div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Sell queue -->
+<dialog id="queueDlg" aria-labelledby="queueTitle">
+  <form method="dialog" class="dlg">
+    <div class="dlg-head"><h2 id="queueTitle">Sell queue</h2><button class="btn ghost" value="close">Done</button></div>
+    <div class="dlg-body" id="queueBody"></div>
+  </form>
+</dialog>
+
+<!-- Weekly check -->
+<dialog id="weeklyDlg" aria-labelledby="wkTitle">
+  <form method="dialog" class="dlg">
+    <div class="dlg-head"><h2 id="wkTitle">Weekly check</h2><button class="btn ghost" id="wkDone" formnovalidate>Close</button></div>
+    <div class="dlg-body">
+      <p class="hint" id="wkStep"></p>
+      <p><b id="wkGame"></b></p>
+      <p class="hint" id="wkMkt"></p>
+      <p><a id="wkTm" target="_blank" rel="noopener" class="lb">Open Ticketmaster</a> &nbsp; Current call: <b id="wkAdv"></b></p>
+      <label>Lowest price in section 109 right now ($) <input id="wkLo" type="number" inputmode="decimal" min="0"></label>
+      <label>Seats listed in my section <input id="wkSeats" type="number" inputmode="numeric" min="0"></label>
+      <div class="btn-row"><button type="button" class="btn ghost" id="wkBack">Back</button><button type="button" class="btn ghost" id="wkSkip">Skip</button><button type="button" class="btn" id="wkNext">Save and next</button></div>
+    </div>
+  </form>
+</dialog>
+
+<!-- First-run setup -->
+<dialog id="setupDlg" aria-labelledby="suTitle">
+  <form method="dialog" class="dlg">
+    <div class="dlg-head"><h2 id="suTitle">Quick setup</h2></div>
+    <div class="dlg-body">
+      <p class="hint">Your seats: <b id="suSeats"></b>. A few answers make the advice accurate. Change any of this later in settings.</p>
+      <label>Face value per seat per game ($) <input id="suFace" type="number" inputmode="decimal" min="0" step="0.01"></label>
+      <label>Seats you own <input id="suCount" type="number" inputmode="numeric" min="1" max="20"></label>
+      <label>Profit target over face (%) <input id="suTarget" type="number" inputmode="numeric" min="0" max="500" step="5"></label>
+      <label class="chk"><input id="suDigest" type="checkbox" checked> Send me one daily digest notification</label>
+      <div class="btn-row"><button type="button" class="btn" id="suSave">Finish setup</button></div>
     </div>
   </form>
 </dialog>

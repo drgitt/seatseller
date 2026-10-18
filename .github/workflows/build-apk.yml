@@ -24,6 +24,23 @@ jobs:
         run: |
           npm ci 2>&1 | tee build.log
           npx cap sync android 2>&1 | tee -a build.log
+      - name: Use private signing key if secrets are set
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KS_KEYPASS: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/private.keystore"
+            echo "SS_KEYSTORE_FILE=$RUNNER_TEMP/private.keystore" >> "$GITHUB_ENV"
+            echo "SS_KEYSTORE_PASSWORD=$KS_PASS" >> "$GITHUB_ENV"
+            echo "SS_KEY_ALIAS=$KS_ALIAS" >> "$GITHUB_ENV"
+            echo "SS_KEY_PASSWORD=${KS_KEYPASS:-$KS_PASS}" >> "$GITHUB_ENV"
+            echo "Using private keystore from secrets"
+          else
+            echo "No secrets set: using the committed key"
+          fi
       - name: Build APK
         working-directory: android
         run: |

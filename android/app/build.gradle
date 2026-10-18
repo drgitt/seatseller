@@ -20,10 +20,20 @@ android {
     // This is a personal sideload key, not a Play Store key.
     signingConfigs {
         seatseller {
-            storeFile file('seatseller.keystore')
-            storePassword 'seatseller'
-            keyAlias 'seatseller'
-            keyPassword 'seatseller'
+            // If the GitHub secrets exist, the workflow decodes a private keystore and these env vars point at it.
+            // Otherwise the committed key is used, so builds keep working and keep installing over each other.
+            def extKs = System.getenv("SS_KEYSTORE_FILE")
+            if (extKs) {
+                storeFile file(extKs)
+                storePassword System.getenv("SS_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("SS_KEY_ALIAS")
+                keyPassword System.getenv("SS_KEY_PASSWORD")
+            } else {
+                storeFile file('seatseller.keystore')
+                storePassword 'seatseller'
+                keyAlias 'seatseller'
+                keyPassword 'seatseller'
+            }
         }
     }
     buildTypes {

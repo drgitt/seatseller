@@ -114,6 +114,22 @@ public class PriceCheckWorker extends Worker {
         return System.currentTimeMillis();
     }
 
+    /** Posts one combined morning notification (after the chosen hour, at most once a day). */
+    static void maybeDigest(Context ctx) {
+        SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        if (!sp.getBoolean("digestOn", true)) return;
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        String today = new SimpleDateFormat("yyyyMMdd", Locale.US).format(new Date());
+        if (today.equals(sp.getString("digestDay", ""))) return;
+        if (c.get(java.util.Calendar.HOUR_OF_DAY) < sp.getInt("digestHour", 8)) return;
+        String extra = sp.getString("digestExtra", ""), pend = sp.getString("digestPending", "");
+        if (extra.isEmpty() && pend.isEmpty()) return;
+        String body = extra + (!extra.isEmpty() && !pend.isEmpty() ? "\n\n" : "") + pend;
+        if (notifyUser(ctx, "SeatSeller daily digest", body, 7001)) {
+            sp.edit().putString("digestDay", today).putString("digestPending", "").apply();
+        }
+    }
+
     /** Returns a short status line, starting with "Failed" when the feed could not be read. */
     static String check(Context ctx) {
         SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -139,7 +155,11 @@ public class PriceCheckWorker extends Worker {
                     long t = parseTime(a.optString("t", null));
                     seen.add(id);
                     if (first || now - t > MAX_ALERT_AGE_MS) continue;
-                    if (notifyUser(ctx, a.optString("title", "SeatSeller"), a.optString("body", ""), id.hashCode())) shown++;
+                    if (sp.getBoolean("digestOn", true)) {
+                        String pend = sp.getString("digestPending", "");
+                        sp.edit().putString("digestPending", (pend.isEmpty() ? "" : pend + "\n") + "• " + a.optString("title", "") + (a.optString("body", "").isEmpty() ? "" : ": " + a.optString("body", ""))).apply();
+                        shown++;
+                    } else if (notifyUser(ctx, a.optString("title", "SeatSeller"), a.optString("body", ""), id.hashCode())) shown++;
                 }
             }
             if (seen.size() > 300) seen.clear();
@@ -151,6 +171,7 @@ public class PriceCheckWorker extends Worker {
             result = "Failed: " + msg;
         }
         try { WidgetProvider.update(ctx); } catch (Exception ignored) { }
+        try { maybeDigest(ctx); } catch (Exception ignored) { }
         sp.edit().putLong("lastCheck", System.currentTimeMillis()).putString("lastResult", result).apply();
         return result;
     }

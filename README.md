@@ -43,13 +43,24 @@ A navy ticket splash shows while the app loads and stays for at least one second
 - **Schedule-change alerts:** if a game moves, its card says "Moved from [date]" and you get a notification.
 
 ### Profit, fees and tax
-- **Mark sold** on any game: seats, price per seat, marketplace and fee. Shows what you receive and your profit against face value.
+- **Mark sold, with partial sales:** sell one seat now and the other later. Each game tracks seats owned, sold and left, shows each sale as its own tag, and offers **Sell remaining** until all seats are gone. Advice and reminders keep working for the seats you still hold.
+- **Actual payout field:** type what Ticketmaster really paid you. The app works out the true fee and learns it for next time.
+- **Ticketmaster is the default marketplace.**
 - **Seller fees:** editable fee per marketplace (Ticketmaster, StubHub, SeatGeek, Vivid Seats, TickPick, Other). Cards show what your low would net after fees. The defaults are estimates, so set your real fees.
 - **Profit screen:** season totals across all teams, net after fees, profit after face value, per-game table.
 - **Tax summary:** export a CSV of sales, fees and profit for a calendar year to Google Drive or any folder. It is a record for you and your accountant, not tax advice.
 - **Renewal planner:** per team, the season's face cost against what you sold, net cost per game you kept, and sales made below face.
 - **Sold too early or late:** log the price of the same seats a day after you sold. The app shows what you left on the table. It reminds you after 24 hours.
 - **Partner split:** name a partner and their share of profit. The profit screen shows what they're owed, and **Share summary** sends a text summary through any app.
+
+### Selling workflow
+- **Profit target:** set the margin over face you want (default 10%). Advice thresholds follow it.
+- **Sell queue:** ranks games by the profit you would pocket after fees on the seats you still own.
+- **Weekly check:** a guided walk through the next few weeks of games, one at a time. Type your section's low and seats listed, with a Ticketmaster link for each. About a minute.
+- **First-run setup:** the first launch asks for face value, seats owned, profit target and digest.
+- **Daily digest:** one morning notification (hour is a setting) with sell candidates, next game, and price alerts, instead of separate alerts. Turn off in settings to get alerts as they come. **Send digest now** tests it.
+- **Self-test:** Settings → Notifications → Run self-test checks the schedule, price feed, face value, notifications, background check and backup.
+- **Stale-data warning:** a banner appears when market prices are over 36 hours old.
 
 ### Smart guidance
 - **Sell-or-hold advice** on every game. Inputs: your logged low (or the market low), seller fee, face value, days to the game, price trend, selling-fast signals, demand score and learned peak timing. Verdicts: Sell now, Consider selling, Hold a little, Hold, Sell or use, Last call, Use or take the loss. It always shows its reason.
@@ -66,6 +77,9 @@ A navy ticket splash shows while the app loads and stays for at least one second
 - **Backup:** Settings → Backup → choose a file in Google Drive and SeatSeller keeps it refreshed about once a day. Also Back up now and Restore from a file. Backups hold teams, prices, sales and settings.
 
 ---
+
+## Your seats
+Seat label is **Section 109, Row E, seats 1-2** (change it in settings).
 
 ## How the data works
 
@@ -93,3 +107,6 @@ npx cap sync android
 cd android && ./gradlew assembleDebug
 ```
 Needs JDK 21 and the Android SDK. The debug keystore in the repo is a personal sideload key so updates install over each other, not a Play Store key.
+
+### Private signing key (optional)
+The committed key is public, so anyone could build an APK that installs over yours. To use a private key: make a keystore, then add GitHub repo secrets `KEYSTORE_BASE64` (base64 of the file), `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and optionally `KEY_PASSWORD`. The workflow uses them when present and falls back to the committed key otherwise. Switching keys means Android will make you **uninstall and reinstall once**, so make a backup first and restore after.

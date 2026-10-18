@@ -157,3 +157,7 @@ dialog::backdrop { background: rgba(5, 10, 24, .6); }
 .after label { display: flex; align-items: center; gap: 8px; color: var(--muted); }
 .after input { width: 90px; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; z-index: 50; max-width: calc(100vw - 32px); }
+.testout{list-style:none;padding:0;margin:8px 0}
+.testout li{padding:3px 0;font-size:14px}
+.testout .ok{color:#1a7f37}.testout .bad{color:#c0392b}
+.sbtn{cursor:pointer;border:0;font:inherit}

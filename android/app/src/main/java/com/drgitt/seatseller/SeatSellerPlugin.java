@@ -279,6 +279,20 @@ public class SeatSellerPlugin extends Plugin {
         call.resolve();
     }
 
+    @PluginMethod
+    public void setDigest(PluginCall call) {
+        sp().edit().putBoolean("digestOn", Boolean.TRUE.equals(call.getBoolean("on", true)))
+                .putInt("digestHour", call.getInt("hour", 8)).putString("digestExtra", call.getString("extra", "")).apply();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void digestNow(PluginCall call) {
+        sp().edit().putString("digestDay", "").apply();
+        PriceCheckWorker.maybeDigest(getContext());
+        call.resolve();
+    }
+
     private String pendingSaveText = "";
 
     @PluginMethod
