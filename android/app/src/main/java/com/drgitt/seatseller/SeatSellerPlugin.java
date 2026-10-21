@@ -46,6 +46,12 @@ public class SeatSellerPlugin extends Plugin {
         o.put("enabled", NotificationManagerCompat.from(ctx).areNotificationsEnabled());
         o.put("lastCheck", sp.getLong("lastCheck", 0L));
         o.put("lastResult", sp.getString("lastResult", ""));
+        o.put("nextDigestAt", sp.getLong("nextDigestAt", 0L));
+        o.put("nextWeeklyAt", sp.getLong("nextWeeklyAt", 0L));
+        try {
+            android.os.PowerManager pm = (android.os.PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
+            o.put("batteryUnrestricted", pm != null && pm.isIgnoringBatteryOptimizations(ctx.getPackageName()));
+        } catch (Exception ignored) { }
         return o;
     }
 
@@ -107,11 +113,11 @@ public class SeatSellerPlugin extends Plugin {
     @PluginMethod
     public void addToCalendarIntent(PluginCall call) {
         try {
-            long start = CalendarSync.utcMidnight(call.getString("date"));
+            long start = CalendarSync.localStart(call.getString("date"), call.getInt("hour", 20));
             Intent i = new Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI)
                     .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, start)
-                    .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, start + 86400000L)
-                    .putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, true)
+                    .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, start + 3L * 3600000L)
+                    .putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, false)
                     .putExtra(CalendarContract.Events.TITLE, call.getString("title", ""))
                     .putExtra(CalendarContract.Events.EVENT_LOCATION, call.getString("location", ""))
                     .putExtra(CalendarContract.Events.DESCRIPTION, call.getString("desc", ""));
@@ -154,12 +160,15 @@ public class SeatSellerPlugin extends Plugin {
     private void runCalendar(final PluginCall call) {
         final Context ctx = getContext();
         final JSONArray events = call.getArray("events");
+        final String calName = call.getString("calName", "");
+        final boolean only = Boolean.TRUE.equals(call.getBoolean("only", false));
         new Thread(new Runnable() {
             @Override
             public void run() {
                 JSObject o = new JSObject();
                 try {
-                    String[] r = CalendarSync.run(ctx, events == null ? new JSONArray() : events);
+                    String[] r = CalendarSync.run(ctx, events == null ? new JSONArray() : events, calName, only);
+                    if (r.length > 4 && !r[4].isEmpty()) o.put("calUsed", r[4]);
                     o.put("added", Integer.parseInt(r[0])); o.put("updated", Integer.parseInt(r[1])); o.put("removed", Integer.parseInt(r[2]));
                     if (!r[3].isEmpty()) o.put("error", r[3]);
                 } catch (Exception e) {
@@ -290,8 +299,25 @@ public class SeatSellerPlugin extends Plugin {
     @PluginMethod
     public void setDigest(PluginCall call) {
         sp().edit().putBoolean("digestOn", Boolean.TRUE.equals(call.getBoolean("on", true)))
-                .putInt("digestHour", call.getInt("hour", 8)).putString("digestExtra", call.getString("extra", "")).apply();
-        call.resolve();
+                .putInt("digestHour", call.getInt("hour", 8)).putString("digestExtra", call.getString("extra", ""))
+                .putBoolean("weeklyOn", Boolean.TRUE.equals(call.getBoolean("weeklyOn", true)))
+                .putInt("weeklyDay", call.getInt("weeklyDay", 1)).putInt("weeklyHour", call.getInt("weeklyHour", 10)).apply();
+        Recurring.scheduleAll(getContext());
+        call.resolve(status());
+    }
+
+    @PluginMethod
+    public void openBatterySettings(PluginCall call) {
+        try {
+            Intent i = new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            try {
+                getContext().startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                call.resolve();
+            } catch (Exception e2) { call.reject("settings"); }
+        }
     }
 
     @PluginMethod

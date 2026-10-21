@@ -97,6 +97,13 @@
       <label class="chk"><input id="prefDigest" type="checkbox"> One daily digest notification instead of separate alerts</label>
       <label>Send the digest after (hour, 0-23) <input id="prefDigestHour" type="number" inputmode="numeric" min="0" max="23" step="1"></label>
       <div class="btn-row"><button type="button" class="btn ghost" id="digestNowBtn">Send digest now</button></div>
+      <label class="chk"><input id="prefWeekly" type="checkbox"> Weekly reminder to do the weekly check</label>
+      <label>Weekly reminder day <select id="prefWeeklyDay"><option value="1">Sunday</option><option value="2">Monday</option><option value="3">Tuesday</option><option value="4">Wednesday</option><option value="5">Thursday</option><option value="6">Friday</option><option value="7">Saturday</option></select></label>
+      <label>Weekly reminder hour (0-23) <input id="prefWeeklyHour" type="number" inputmode="numeric" min="0" max="23"></label>
+      <div class="btn-row"><button type="button" class="btn ghost" id="batteryBtn">Allow background activity</button></div>
+      <p class="hint">If notifications are late or missing, tap Allow background activity and choose Unrestricted or Don't optimize for SeatSeller. Then run the self-test.</p>
+      <label>Game start time for calendar events (hour, 0-23) <input id="prefGameHour" type="number" inputmode="numeric" min="0" max="23"></label>
+      <label>Phone calendar to add games to (name or account contains) <input id="prefCalName" type="text" placeholder="Ticketmaster"></label>
 
       <h3>Selling-fast rules</h3>
       <label>Your listed seats drop by at least (%) <input id="prefDrop" type="number" inputmode="numeric" min="5" max="90" step="5"></label>

@@ -20,6 +20,7 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         PriceCheckWorker.ensureChannel(this);
         schedulePriceChecks();
+        Recurring.scheduleAll(this);
     }
 
     private void schedulePriceChecks() {

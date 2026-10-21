@@ -26,7 +26,7 @@
   var WIZ_SEATS = "Section 109, Row E, seats 1-2";
   var WIZ = {id: "wiz", name: "Washington Wizards", league: "NBA", venue: "Capital One Arena", seats: WIZ_SEATS, seatCount: 2, face: "", builtin: true, games: []};
   var MKTS = [["TM","Ticketmaster",15],["SH","StubHub",10],["SG","SeatGeek",10],["VS","Vivid Seats",10],["TP","TickPick",10],["OT","Other",10]];
-  var state = {v: 2, active: "wiz", all: false, teams: [WIZ], prices: {}, sales: {}, mhist: {}, prefs: {theme: "system", weeks: 3, view: "soon", drop: 25, jump: 15, usual: "TM", target: 10, digestOn: true, digestHour: 8, setupDone: false, listDays: 3, lastCall: true, sort: "date", spike: 25, weather: true, fees: {TM: 15, SH: 10, SG: 10, VS: 10, TP: 10, OT: 10}}};
+  var state = {v: 2, active: "wiz", all: false, teams: [WIZ], prices: {}, sales: {}, mhist: {}, prefs: {theme: "system", weeks: 3, view: "soon", drop: 25, jump: 15, usual: "TM", calName: "Ticketmaster", gameHour: 20, weeklyOn: true, weeklyDay: 1, weeklyHour: 10, target: 10, digestOn: true, digestHour: 8, setupDone: false, listDays: 3, lastCall: true, sort: "date", spike: 25, weather: true, fees: {TM: 15, SH: 10, SG: 10, VS: 10, TP: 10, OT: 10}}};
   var RECORDS = {}, SCHED = {}, HIST = {}, WX = {};
   var MARKET = {}, ALERTS = [], UPDATED = null, FETCH_NOTE = "";
   var Native = null;
@@ -52,6 +52,7 @@
       state.all = state.all || false;
     }
     if (!state.teams.some(function (t) { return t.id === state.active; })) state.active = state.teams[0].id;
+    var DP = {calName: "Ticketmaster", gameHour: 20, weeklyOn: true, weeklyDay: 1, weeklyHour: 10}; Object.keys(DP).forEach(function (k) { if (state.prefs[k] == null) state.prefs[k] = DP[k]; });
     if (!state.prefs.tmDefault) { state.prefs.tmDefault = 1; state.prefs.usual = "TM"; }
     Object.keys(state.sales).forEach(function (tid) { var S = state.sales[tid]; Object.keys(S).forEach(function (g) { if (!Array.isArray(S[g])) S[g] = [S[g]]; }); });
     state.teams.forEach(function (t) { if (t.id === "wiz" && (!t.seats || /rows E1 and E2/i.test(t.seats))) t.seats = WIZ_SEATS; });
@@ -403,6 +404,7 @@
     [].forEach.call(document.querySelectorAll("[data-fee]"), function (i) { i.value = state.prefs.fees[i.dataset.fee]; });
     paintBackup();
     $("removeTeam").disabled = state.teams.length < 2;
+    $("prefCalName").value = state.prefs.calName || ""; $("prefGameHour").value = gameHour(); $("prefWeekly").checked = state.prefs.weeklyOn !== false; $("prefWeeklyDay").value = state.prefs.weeklyDay; $("prefWeeklyHour").value = state.prefs.weeklyHour;
     $("prefTarget").value = state.prefs.target; $("prefDigest").checked = state.prefs.digestOn !== false; $("prefDigestHour").value = state.prefs.digestHour || 8;
     $("prefSort").value = state.prefs.sort; $("prefSpike").value = state.prefs.spike; $("prefWeather").checked = !!state.prefs.weather;
     $("tSeatCount").value = T.seatCount || 2; $("tPartner").value = (T.partner && T.partner.name) || ""; $("tPartnerPct").value = (T.partner && T.partner.pct) || 50;
@@ -825,7 +827,7 @@
   }
   function pushDigest() {
     if (!Native || !Native.setDigest) return;
-    try { Native.setDigest({on: state.prefs.digestOn !== false, hour: +state.prefs.digestHour || 8, extra: digestText()}); } catch (e) {}
+    try { Native.setDigest({on: state.prefs.digestOn !== false, hour: +state.prefs.digestHour || 8, extra: digestText(), weeklyOn: state.prefs.weeklyOn !== false, weeklyDay: +state.prefs.weeklyDay || 1, weeklyHour: state.prefs.weeklyHour == null ? 10 : +state.prefs.weeklyHour}); } catch (e) {}
   }
   function staleCheck() {
     var el = $("staleBanner"); if (!el) return;
@@ -874,6 +876,9 @@
       add(!!s.enabled, s.enabled ? "Notifications are allowed" : "Notifications are blocked or off");
       add(!!s.lastCheck, s.lastCheck ? "Background check last ran " + fmtTime(s.lastCheck) : "Background check has not run yet");
       if (s.lastResult) add(!/^Failed/.test(s.lastResult), "Last check result: " + s.lastResult);
+      add(state.prefs.digestOn === false || s.nextDigestAt > Date.now(), state.prefs.digestOn === false ? "Daily digest is off" : s.nextDigestAt > Date.now() ? "Next daily digest: " + fmtTime(s.nextDigestAt) : "Daily digest is not scheduled. Open Settings and change the hour to re-arm it");
+      add(state.prefs.weeklyOn === false || s.nextWeeklyAt > Date.now(), state.prefs.weeklyOn === false ? "Weekly reminder is off" : s.nextWeeklyAt > Date.now() ? "Next weekly reminder: " + fmtTime(s.nextWeeklyAt) : "Weekly reminder is not scheduled");
+      add(!!s.batteryUnrestricted, s.batteryUnrestricted ? "Battery: SeatSeller is allowed to run in the background" : "Battery saver may delay or drop notifications. Tap Allow background activity in Settings");
       return Native.getBackupStatus().catch(function () { return {}; });
     }).then(function (b) {
       add(!!(b && (b.uri || b.configured)), b && (b.uri || b.configured) ? "Backup file is chosen" : "No backup file chosen (optional)");
@@ -972,12 +977,18 @@
   }
   function ymdUTC(iso, plus) { var p = iso.split("-"), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + (plus || 0))); return d.getUTCFullYear() + ("0" + (d.getUTCMonth() + 1)).slice(-2) + ("0" + d.getUTCDate()).slice(-2); }
   function icsEscape(t) { return String(t).replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\n/g, "\\n"); }
+  function pad2(n) { return ("0" + n).slice(-2); }
+  function localStamp(iso, hour, plusMin) {
+    var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2], hour, 0, 0); d = new Date(d.getTime() + (plusMin || 0) * 60000);
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + "T" + pad2(d.getHours()) + pad2(d.getMinutes()) + "00";
+  }
+  function gameHour() { var h = parseInt(state.prefs.gameHour, 10); return isNaN(h) ? 20 : Math.min(23, Math.max(0, h)); }
   function icsFor(list) {
     var ld = Math.max(0, +state.prefs.listDays || 0);
     var L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//SeatSeller//EN"];
     list.forEach(function (e) {
       L.push("BEGIN:VEVENT", "UID:" + e.key + "@seatseller", "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z",
-        "DTSTART;VALUE=DATE:" + ymdUTC(e.date), "DTEND;VALUE=DATE:" + ymdUTC(e.date, 1), "SUMMARY:" + icsEscape(e.title), "LOCATION:" + icsEscape(e.location || ""), "DESCRIPTION:" + icsEscape(e.desc || ""));
+        "DTSTART:" + localStamp(e.date, e.hour), "DTEND:" + localStamp(e.date, e.hour, 180), "SUMMARY:" + icsEscape(e.title), "LOCATION:" + icsEscape(e.location || ""), "DESCRIPTION:" + icsEscape(e.desc || ""));
       if (ld > 0) L.push("BEGIN:VALARM", "TRIGGER:-PT" + (ld * 1440 - 540) + "M", "ACTION:DISPLAY", "DESCRIPTION:List your seats", "END:VALARM");
       L.push("END:VEVENT");
     });
@@ -989,12 +1000,12 @@
   }
   function calEvent(T, G) {
     var ld = Math.max(0, +state.prefs.listDays || 0);
-    return {key: T.id + "-" + G.id, title: nick(T.name) + " vs " + G.opp, date: G.date, location: T.venue || "", remind: ld > 0 ? ld * 1440 - 540 : 0,
+    return {key: T.id + "-" + G.id, title: nick(T.name) + " vs " + G.opp, date: G.date, hour: gameHour(), location: T.venue || "", remind: ld > 0 ? ld * 1440 - 540 : 0,
       desc: (T.seats ? "My seats: " + T.seats + ". " : "") + (ld > 0 ? "List by " + ld + " day" + (ld > 1 ? "s" : "") + " before. " : "") + (G.tag || "")};
   }
   var calCur = null;
   function gcalURL(e) {
-    return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(e.title) + "&dates=" + ymdUTC(e.date) + "/" + ymdUTC(e.date, 1) +
+    return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(e.title) + "&dates=" + localStamp(e.date, e.hour) + "/" + localStamp(e.date, e.hour, 180) + "&ctz=" + encodeURIComponent((window.Intl && Intl.DateTimeFormat().resolvedOptions().timeZone) || "America/New_York") +
       "&location=" + encodeURIComponent(e.location || "") + "&details=" + encodeURIComponent(e.desc || "");
   }
   function calendarOne(g) {
@@ -1008,8 +1019,8 @@
     if (!list.length) { $("calStatus").textContent = "No upcoming games to add yet."; return; }
     if (Native && Native.syncCalendar) {
       $("calStatus").textContent = "Adding " + list.length + " games…";
-      Native.syncCalendar({events: list}).then(function (r) {
-        $("calStatus").textContent = r.error ? r.error : "Calendar updated: " + r.added + " added, " + r.updated + " updated, " + r.removed + " removed.";
+      Native.syncCalendar({events: list, calName: state.prefs.calName || ""}).then(function (r) {
+        $("calStatus").textContent = r.error ? r.error : "Calendar updated in " + (r.calUsed || "your calendar") + ": " + r.added + " added, " + r.updated + " updated, " + r.removed + " removed.";
       }).catch(function (e) { $("calStatus").textContent = "Couldn't reach the calendar. Allow calendar access when Android asks and try again."; });
     } else { downloadText("SeatSeller-games.ics", "text/calendar", icsFor(list)); $("calStatus").textContent = "Downloaded a calendar file with " + list.length + " games."; }
   }
@@ -1042,8 +1053,14 @@
     $("prefListDays").addEventListener("change", function (e) { state.prefs.listDays = Math.min(30, Math.max(0, parseInt(e.target.value, 10) || 0)); e.target.value = state.prefs.listDays; save(); });
     $("prefLastCall").addEventListener("change", function (e) { state.prefs.lastCall = e.target.checked; save(); });
     $("calAll").addEventListener("click", calendarAll);
-    $("calPhone").addEventListener("click", function (e) { e.preventDefault(); $("calMsg").textContent = "Opening your calendar app…";
-      Native.addToCalendarIntent(calCur).then(function () { closeDlg($("calDlg")); }).catch(function (err) { $("calMsg").textContent = "Your phone's calendar app didn't open (" + ((err && err.message) || "no calendar app found") + "). Use Google Calendar or the calendar file instead."; }); });
+    $("calPhone").addEventListener("click", function (e) {
+      e.preventDefault(); $("calMsg").textContent = "Adding to your calendar…";
+      var viaIntent = function (why) { Native.addToCalendarIntent(calCur).then(function () { closeDlg($("calDlg")); }).catch(function (err) { $("calMsg").textContent = (why ? why + " " : "") + "Your phone's calendar app didn't open (" + ((err && err.message) || "no calendar app found") + "). Use Google Calendar or the calendar file instead."; }); };
+      Native.syncCalendar({events: [calCur], calName: state.prefs.calName || "", only: true}).then(function (r) {
+        if (r.error) { viaIntent(r.error); return; }
+        $("calMsg").textContent = "Added to your " + (r.calUsed || "phone") + " calendar at " + gameHour() + ":00. If it asks, Google Calendar syncs it in a moment.";
+      }).catch(function () { viaIntent(""); });
+    });
     $("calIcs").addEventListener("click", function (e) { e.preventDefault(); if (calCur) { downloadText("SeatSeller-" + calCur.key + ".ics", "text/calendar", icsFor([calCur])); $("calMsg").textContent = "Calendar file downloaded. Open it to add the game."; } });
     $("calGoogle").addEventListener("click", function () { setTimeout(function () { closeDlg($("calDlg")); }, 300); });
     $("prefSort").addEventListener("change", function (e) { state.prefs.sort = e.target.value; save(); render(); });
@@ -1068,6 +1085,12 @@
     $("wkBack").addEventListener("click", function (e) { e.preventDefault(); if (wkI > 0) { wkI--; paintWeekly(); } });
     $("wkDone").addEventListener("click", function (e) { e.preventDefault(); closeDlg($("weeklyDlg")); render(); });
     $("selfTestBtn").addEventListener("click", selfTest);
+    $("prefCalName").addEventListener("change", function (e) { state.prefs.calName = e.target.value.trim(); save(); });
+    $("prefGameHour").addEventListener("change", function (e) { var v = Math.min(23, Math.max(0, parseInt(e.target.value, 10))); if (isNaN(v)) v = 20; e.target.value = v; state.prefs.gameHour = v; save(); });
+    $("prefWeekly").addEventListener("change", function (e) { state.prefs.weeklyOn = e.target.checked; save(); pushDigest(); });
+    $("prefWeeklyDay").addEventListener("change", function (e) { state.prefs.weeklyDay = parseInt(e.target.value, 10) || 1; save(); pushDigest(); });
+    $("prefWeeklyHour").addEventListener("change", function (e) { var v = Math.min(23, Math.max(0, parseInt(e.target.value, 10))); if (isNaN(v)) v = 10; e.target.value = v; state.prefs.weeklyHour = v; save(); pushDigest(); });
+    $("batteryBtn").addEventListener("click", function () { if (Native && Native.openBatterySettings) Native.openBatterySettings().catch(function () {}); else toast("This works in the Android app"); });
     $("prefTarget").addEventListener("change", function (e) { var v = Math.min(500, Math.max(0, parseFloat(e.target.value) || 0)); e.target.value = v; state.prefs.target = v; save(); render(); });
     $("prefDigest").addEventListener("change", function (e) { state.prefs.digestOn = e.target.checked; save(); pushDigest(); });
     $("prefDigestHour").addEventListener("change", function (e) { var v = Math.min(23, Math.max(0, parseInt(e.target.value, 10) || 8)); e.target.value = v; state.prefs.digestHour = v; save(); pushDigest(); });

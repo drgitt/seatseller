@@ -54,7 +54,8 @@ A navy ticket splash shows while the app loads and stays for at least one second
 - **Partner split:** name a partner and their share of profit. The profit screen shows what they're owed, and **Share summary** sends a text summary through any app.
 
 ### Calendar, asking price, optional market data
-- **Calendar button** on each game opens a chooser: your phone's calendar app, Google Calendar (web link), or a downloadable calendar file. If the phone calendar can't open, it says why.
+- **Calendar button** on each game opens a chooser: Phone calendar, Google Calendar (web link), or a downloadable calendar file. Events start at **8 PM** on game day and run 3 hours (hour is a setting).
+- **Ticketmaster calendar:** the Phone calendar option files the event directly into the phone calendar whose name or account contains "Ticketmaster" (changeable in Settings; falls back to your primary calendar and says so). Google's web link cannot choose a calendar, so it lands in your default one.
 - **Asking price:** each game has an Asking $ box for the price you are trying to sell at. It shows as a tag with what it nets after fees, pre-fills Mark sold, and drives the Sell queue and digest. The weekly check has it too.
 - **Market low and Ticketmaster info are optional:** Settings → your team → uncheck "Show market low and Ticketmaster price info" and the app uses only the prices you enter. No market lows, spike or alert banners, or stale warning.
 - The List helper button was removed.
@@ -64,6 +65,7 @@ A navy ticket splash shows while the app loads and stays for at least one second
 - **Sell queue:** ranks games by the profit you would pocket after fees on the seats you still own.
 - **Weekly check:** a guided walk through the next few weeks of games, one at a time. Type your section's low and seats listed, with a Ticketmaster link for each. About a minute.
 - **First-run setup:** the first launch asks for face value, seats owned, profit target and digest.
+- **Reliable reminders:** the daily digest and a weekly check reminder (default Sunday 10 AM) are their own alarms that re-arm themselves each time, restore after reboot or an app update, and don't depend on the background price check. Settings → Allow background activity opens Android's battery screen; set SeatSeller to Unrestricted so Android doesn't delay them. The self-test shows the next scheduled digest and weekly reminder.
 - **Daily digest:** one morning notification (hour is a setting) with sell candidates, next game, and price alerts, instead of separate alerts. Turn off in settings to get alerts as they come. **Send digest now** tests it.
 - **Self-test:** Settings → Notifications → Run self-test checks the schedule, price feed, face value, notifications, background check and backup.
 - **Stale-data warning:** a banner appears when market prices are over 36 hours old.
