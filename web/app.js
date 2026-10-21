@@ -199,7 +199,7 @@
       '</div><a class="sell" href="https://myaccount.ticketmaster.com/" target="_blank" rel="noopener">Sell</a></div>' +
       '<div class="links">' +
         '<a href="https://www.ticketmaster.com/search?q=' + enc(q) + '" target="_blank" rel="noopener">Ticketmaster</a>' +
-        '<a href="https://www.stubhub.com/find/s/?q=' + enc(q) + '" target="_blank" rel="noopener">StubHub</a>' +
+        '<a href="https://www.stubhub.com/secure/search?q=' + enc(q) + '" target="_blank" rel="noopener">StubHub</a>' +
         '<a href="https://seatgeek.com/search?search=' + enc(q) + '" target="_blank" rel="noopener">SeatGeek</a>' +
         '<a href="https://www.vividseats.com/search?searchTerm=' + enc(q) + '" target="_blank" rel="noopener">Vivid Seats</a>' +
         (left > 0 ? '<button type="button" class="lb" data-sold="' + esc(g) + '">' + (sale ? 'Sell remaining' : 'Mark sold') + '</button>' : '') +
