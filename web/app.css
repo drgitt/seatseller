@@ -161,3 +161,4 @@ dialog::backdrop { background: rgba(5, 10, 24, .6); }
 .testout li{padding:3px 0;font-size:14px}
 .testout .ok{color:#1a7f37}.testout .bad{color:#c0392b}
 .sbtn{cursor:pointer;border:0;font:inherit}
+a.btn{text-decoration:none;display:inline-block}

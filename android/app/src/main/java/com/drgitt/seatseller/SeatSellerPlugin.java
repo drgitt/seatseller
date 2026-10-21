@@ -115,8 +115,16 @@ public class SeatSellerPlugin extends Plugin {
                     .putExtra(CalendarContract.Events.TITLE, call.getString("title", ""))
                     .putExtra(CalendarContract.Events.EVENT_LOCATION, call.getString("location", ""))
                     .putExtra(CalendarContract.Events.DESCRIPTION, call.getString("desc", ""));
-            getActivity().startActivity(i);
-            call.resolve();
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            final Intent fi = i;
+            getActivity().runOnUiThread(() -> {
+                try {
+                    getContext().startActivity(fi);
+                    call.resolve();
+                } catch (Exception ex) {
+                    call.reject("no calendar app found");
+                }
+            });
         } catch (Exception e) {
             call.reject("calendar: " + e.getMessage());
         }

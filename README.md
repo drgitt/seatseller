@@ -53,6 +53,12 @@ A navy ticket splash shows while the app loads and stays for at least one second
 - **Sold too early or late:** log the price of the same seats a day after you sold. The app shows what you left on the table. It reminds you after 24 hours.
 - **Partner split:** name a partner and their share of profit. The profit screen shows what they're owed, and **Share summary** sends a text summary through any app.
 
+### Calendar, asking price, optional market data
+- **Calendar button** on each game opens a chooser: your phone's calendar app, Google Calendar (web link), or a downloadable calendar file. If the phone calendar can't open, it says why.
+- **Asking price:** each game has an Asking $ box for the price you are trying to sell at. It shows as a tag with what it nets after fees, pre-fills Mark sold, and drives the Sell queue and digest. The weekly check has it too.
+- **Market low and Ticketmaster info are optional:** Settings → your team → uncheck "Show market low and Ticketmaster price info" and the app uses only the prices you enter. No market lows, spike or alert banners, or stale warning.
+- The List helper button was removed.
+
 ### Selling workflow
 - **Profit target:** set the margin over face you want (default 10%). Advice thresholds follow it.
 - **Sell queue:** ranks games by the profit you would pocket after fees on the seats you still own.

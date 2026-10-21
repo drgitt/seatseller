@@ -71,6 +71,7 @@
       <label>Venue <input id="setVenue" type="text" maxlength="60" placeholder="e.g. Capital One Arena"></label>
       <label>My seats <input id="seatlabel" type="text" maxlength="60" placeholder="Section 109, rows E1 and E2"></label>
       <label>Face value per seat ($) <input id="face" type="number" inputmode="decimal" min="0" step="1" placeholder="e.g. 85"></label>
+      <label class="chk"><input id="tUseMarket" type="checkbox"> Show market low and Ticketmaster price info for this team (uncheck to use only prices I enter)</label>
       <label>Seats I own <input id="tSeatCount" type="number" inputmode="numeric" min="1" max="20" step="1"></label>
       <label>Split profit with (name, optional) <input id="tPartner" type="text" maxlength="40" placeholder="e.g. Chris"></label>
       <label>Their share of profit (%) <input id="tPartnerPct" type="number" inputmode="decimal" min="0" max="100" step="1"></label>
@@ -159,6 +160,20 @@
   </form>
 </dialog>
 
+<!-- Add to calendar -->
+<dialog id="calDlg" aria-labelledby="calTitle">
+  <form method="dialog" class="dlg">
+    <div class="dlg-head"><h2 id="calTitle">Add to calendar</h2><button class="btn ghost" value="close">Close</button></div>
+    <div class="dlg-body">
+      <p class="hint" id="calGame"></p>
+      <div class="btn-row"><button type="button" class="btn" id="calPhone">Phone calendar</button></div>
+      <div class="btn-row"><a class="btn" id="calGoogle" target="_blank" rel="noopener">Google Calendar</a></div>
+      <div class="btn-row"><button type="button" class="btn ghost" id="calIcs">Download calendar file</button></div>
+      <p class="hint" id="calMsg"></p>
+    </div>
+  </form>
+</dialog>
+
 <!-- Sell queue -->
 <dialog id="queueDlg" aria-labelledby="queueTitle">
   <form method="dialog" class="dlg">
@@ -176,6 +191,7 @@
       <p><b id="wkGame"></b></p>
       <p class="hint" id="wkMkt"></p>
       <p><a id="wkTm" target="_blank" rel="noopener" class="lb">Open Ticketmaster</a> &nbsp; Current call: <b id="wkAdv"></b></p>
+      <label>My asking price ($) <input id="wkAsk" type="number" inputmode="decimal" min="0"></label>
       <label>Lowest price in section 109 right now ($) <input id="wkLo" type="number" inputmode="decimal" min="0"></label>
       <label>Seats listed in my section <input id="wkSeats" type="number" inputmode="numeric" min="0"></label>
       <div class="btn-row"><button type="button" class="btn ghost" id="wkBack">Back</button><button type="button" class="btn ghost" id="wkSkip">Skip</button><button type="button" class="btn" id="wkNext">Save and next</button></div>
