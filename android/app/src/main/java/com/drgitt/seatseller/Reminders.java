@@ -48,7 +48,7 @@ final class Reminders {
                 long at = o.getLong("at");
                 if (at <= now) continue;
                 PendingIntent p = pi(ctx, o.getString("id"), o.optString("title"), o.optString("body"), PendingIntent.FLAG_UPDATE_CURRENT);
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, p);
+                Recurring.arm(ctx, am, at, p);
             } catch (Exception ignored) { }
         }
     }

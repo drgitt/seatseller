@@ -16,6 +16,7 @@ public class RecurringReceiver extends BroadcastReceiver {
         if (i == null || !Recurring.ACTION.equals(i.getAction())) return;
         SharedPreferences sp = ctx.getSharedPreferences(PriceCheckWorker.PREFS, Context.MODE_PRIVATE);
         String kind = i.getStringExtra("kind");
+        sp.edit().putLong("lastFiredAt", System.currentTimeMillis()).putString("lastFiredKind", String.valueOf(kind)).apply();
         try {
             if ("weekly".equals(kind)) {
                 if (sp.getBoolean("weeklyOn", true))

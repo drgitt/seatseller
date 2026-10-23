@@ -33,6 +33,14 @@ final class Recurring {
         return c.getTimeInMillis();
     }
 
+    /** Exact (to the minute) when Android allows it, otherwise the best inexact alarm that still wakes a dozing phone. */
+    static void arm(Context ctx, AlarmManager am, long at, PendingIntent p) {
+        try {
+            if (android.os.Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) { am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, p); return; }
+        } catch (SecurityException ignored) { }
+        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, p);
+    }
+
     static void scheduleAll(Context ctx) {
         SharedPreferences sp = ctx.getSharedPreferences(PriceCheckWorker.PREFS, Context.MODE_PRIVATE);
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
@@ -41,13 +49,13 @@ final class Recurring {
         PendingIntent d = pi(ctx, "digest", PendingIntent.FLAG_UPDATE_CURRENT);
         if (sp.getBoolean("digestOn", true)) {
             long at = next(0, sp.getInt("digestHour", 8));
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, d);
+            arm(ctx, am, at, d);
             ed.putLong("nextDigestAt", at);
         } else { am.cancel(d); ed.putLong("nextDigestAt", 0L); }
         PendingIntent w = pi(ctx, "weekly", PendingIntent.FLAG_UPDATE_CURRENT);
         if (sp.getBoolean("weeklyOn", true)) {
             long at = next(sp.getInt("weeklyDay", Calendar.SUNDAY), sp.getInt("weeklyHour", 10));
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, w);
+            arm(ctx, am, at, w);
             ed.putLong("nextWeeklyAt", at);
         } else { am.cancel(w); ed.putLong("nextWeeklyAt", 0L); }
         ed.apply();

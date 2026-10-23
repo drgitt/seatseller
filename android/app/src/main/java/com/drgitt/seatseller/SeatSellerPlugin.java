@@ -46,6 +46,16 @@ public class SeatSellerPlugin extends Plugin {
         o.put("enabled", NotificationManagerCompat.from(ctx).areNotificationsEnabled());
         o.put("lastCheck", sp.getLong("lastCheck", 0L));
         o.put("lastResult", sp.getString("lastResult", ""));
+        o.put("lastFiredAt", sp.getLong("lastFiredAt", 0L));
+        o.put("lastFiredKind", sp.getString("lastFiredKind", ""));
+        o.put("lastNotify", sp.getString("lastNotify", ""));
+        try {
+            android.app.NotificationManager nm = (android.app.NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            android.app.NotificationChannel ch = Build.VERSION.SDK_INT >= 26 && nm != null ? nm.getNotificationChannel(PriceCheckWorker.CHANNEL_ID) : null;
+            o.put("channelBlocked", ch != null && ch.getImportance() == android.app.NotificationManager.IMPORTANCE_NONE);
+            android.app.AlarmManager am = (android.app.AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+            o.put("exactAlarms", Build.VERSION.SDK_INT < 31 || (am != null && am.canScheduleExactAlarms()));
+        } catch (Exception ignored) { }
         o.put("nextDigestAt", sp.getLong("nextDigestAt", 0L));
         o.put("nextWeeklyAt", sp.getLong("nextWeeklyAt", 0L));
         try {
@@ -303,6 +313,17 @@ public class SeatSellerPlugin extends Plugin {
                 .putBoolean("weeklyOn", Boolean.TRUE.equals(call.getBoolean("weeklyOn", true)))
                 .putInt("weeklyDay", call.getInt("weeklyDay", 1)).putInt("weeklyHour", call.getInt("weeklyHour", 10)).apply();
         Recurring.scheduleAll(getContext());
+        call.resolve(status());
+    }
+
+    @PluginMethod
+    public void testAlarm(PluginCall call) {
+        Context ctx = getContext();
+        android.app.AlarmManager am = (android.app.AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        Intent i = new Intent(ctx, ReminderReceiver.class).setAction(ReminderReceiver.ACTION)
+                .putExtra("title", "SeatSeller alarm test").putExtra("body", "This came from a scheduled alarm while the app was closed, so reminders can reach you.").putExtra("nid", 1002);
+        android.app.PendingIntent pi = android.app.PendingIntent.getBroadcast(ctx, 1002, i, android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
+        Recurring.arm(ctx, am, System.currentTimeMillis() + 60000L, pi);
         call.resolve(status());
     }
 

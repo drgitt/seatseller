@@ -47,6 +47,7 @@ public class PriceCheckWorker extends Worker {
     public Result doWork() {
         String r = check(getApplicationContext());
         BackupHelper.maybeBackup(getApplicationContext());
+        try { Recurring.scheduleAll(getApplicationContext()); } catch (Exception ignored) { }
         return r.startsWith("Failed") ? Result.retry() : Result.success();
     }
 
@@ -63,7 +64,8 @@ public class PriceCheckWorker extends Worker {
 
     static boolean notifyUser(Context ctx, String title, String body, int id) {
         ensureChannel(ctx);
-        if (!NotificationManagerCompat.from(ctx).areNotificationsEnabled()) return false;
+        SharedPreferences nsp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        if (!NotificationManagerCompat.from(ctx).areNotificationsEnabled()) { nsp.edit().putString("lastNotify", "BLOCKED: notifications are turned off for SeatSeller|" + System.currentTimeMillis()).apply(); return false; }
         Intent launch = ctx.getPackageManager().getLaunchIntentForPackage(ctx.getPackageName());
         PendingIntent pi = null;
         if (launch != null) {
@@ -80,8 +82,10 @@ public class PriceCheckWorker extends Worker {
         if (pi != null) b.setContentIntent(pi);
         try {
             NotificationManagerCompat.from(ctx).notify(id, b.build());
+            nsp.edit().putString("lastNotify", "posted: " + title + "|" + System.currentTimeMillis()).apply();
             return true;
         } catch (SecurityException e) {
+            nsp.edit().putString("lastNotify", "BLOCKED: permission denied|" + System.currentTimeMillis()).apply();
             return false;
         }
     }

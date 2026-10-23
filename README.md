@@ -60,6 +60,11 @@ A navy ticket splash shows while the app loads and stays for at least one second
 - **Market low and Ticketmaster info are optional:** Settings → your team → uncheck "Show market low and Ticketmaster price info" and the app uses only the prices you enter. No market lows, spike or alert banners, or stale warning.
 - The List helper button was removed.
 
+### Sold checkbox and vendor prices
+- **Sold checkbox** on every game card. Checking it opens the sale form (seats, price, payout) so profit stays accurate; unchecking removes the sale after a confirmation. Partial sales show as "Fully sold" once all seats are gone.
+- **Vendor prices:** each card has a Vendor prices section with its own Low and High line for Ticketmaster, StubHub, SeatGeek, Vivid Seats and TickPick, what each nets after its fee, and which vendor nets the most. If you leave your own section Low blank, the cheapest vendor low is used for advice.
+- **Notification diagnostics:** Settings → Test alarm (1 min) schedules a real alarm so you can close the app and see if it arrives. The self-test reports the last notification posted, the last alarm that fired, blocked channels, battery restrictions and exact-alarm access. Alarms are exact-time where Android allows.
+
 ### Selling workflow
 - **Profit target:** set the margin over face you want (default 10%). Advice thresholds follow it.
 - **Sell queue:** ranks games by the profit you would pocket after fees on the seats you still own.

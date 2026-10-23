@@ -162,3 +162,10 @@ dialog::backdrop { background: rgba(5, 10, 24, .6); }
 .testout .ok{color:#1a7f37}.testout .bad{color:#c0392b}
 .sbtn{cursor:pointer;border:0;font:inherit}
 a.btn{text-decoration:none;display:inline-block}
+.vend{grid-column:1/-1;margin:6px 0;font-size:13px}
+.vend summary{cursor:pointer;font-weight:600;padding:4px 0}
+.vrow{display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap}
+.vrow .vn{width:92px}
+.vrow input{width:80px;padding:6px}
+.vrow .vnet{font-size:12px;opacity:.75}
+.soldchk{display:inline-flex;align-items:center;gap:6px;font-weight:600}

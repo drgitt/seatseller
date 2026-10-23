@@ -93,6 +93,26 @@
   function whenLabel(n) { return n === 0 ? "Tonight" : n === 1 ? "Tomorrow" : "In " + n + " days"; }
 
   /* ---------- teams and games ---------- */
+  var VENDORS = [["TM", "Ticketmaster"], ["SH", "StubHub"], ["SG", "SeatGeek"], ["VS", "Vivid Seats"], ["TP", "TickPick"]], openVend = {};
+  function myLow(p) {
+    var v = parseFloat(p && p.lo); if (!isNaN(v)) return v;
+    var best = NaN; VENDORS.forEach(function (x) { var q = p && p.v && p.v[x[0]], l = q ? parseFloat(q.lo) : NaN; if (!isNaN(l) && (isNaN(best) || l < best)) best = l; });
+    return best;
+  }
+  function vendorHTML(g, p) {
+    var rows = "", filled = 0, best = null;
+    VENDORS.forEach(function (x) {
+      var q = (p.v && p.v[x[0]]) || {}, lo = parseFloat(q.lo), nt = isNaN(lo) ? null : lo * (1 - fee(x[0]) / 100);
+      if (q.lo || q.hi) filled++;
+      if (nt != null && (!best || nt > best.nt)) best = {name: x[1], nt: nt};
+      rows += '<div class="vrow"><span class="vn">' + x[1] + '</span>' +
+        '<input type="number" inputmode="decimal" min="0" placeholder="Low $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="lo" aria-label="' + x[1] + ' low" value="' + (q.lo || "") + '">' +
+        '<input type="number" inputmode="decimal" min="0" placeholder="High $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="hi" aria-label="' + x[1] + ' high" value="' + (q.hi || "") + '">' +
+        '<span class="vnet">' + (nt == null ? "" : "nets " + money(Math.round(nt * 100) / 100)) + '</span></div>';
+    });
+    return '<details class="vend" data-vg="' + esc(g) + '"' + (openVend[g] ? ' open' : '') + '><summary>Vendor prices' + (filled ? ' · ' + filled + ' entered' : '') + '</summary>' + rows +
+      (best ? '<div class="hint">Best net at the low price: ' + best.name + ' about ' + money(Math.round(best.nt * 100) / 100) + ' a seat after fees.</div>' : '') + '</details>';
+  }
   function salesOf(T, g) { var v = (state.sales[T.id] || {})[g]; return !v ? [] : Array.isArray(v) ? v : [v]; }
   function setSales(T, g, arr) { var S = state.sales[T.id] || (state.sales[T.id] = {}); if (arr.length) S[g] = arr; else delete S[g]; }
   function seatsOwned(T) { return Math.max(1, parseInt(T.seatCount, 10) || 2); }
@@ -145,7 +165,7 @@
 
   /* ---------- signals ---------- */
   function signal(g) {
-    var p = prices()[g] || {}, face = parseFloat(team().face), lo = parseFloat(p.lo);
+    var p = prices()[g] || {}, face = parseFloat(team().face), lo = myLow(p);
     if (isNaN(lo)) return ["No price logged", ""];
     if (isNaN(face) || face <= 0) return ["Low " + money(lo), "cool"];
     var diff = lo - face;
@@ -197,7 +217,8 @@
         '<input type="number" inputmode="decimal" min="0" id="ask-' + g + '" data-g="' + esc(g) + '" data-k="ask" placeholder="Asking $" aria-label="My asking price for ' + esc(name) + '" value="' + (p.ask || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" id="hi-' + g + '" data-g="' + esc(g) + '" data-k="hi" placeholder="High $" aria-label="Highest price in my rows for ' + esc(name) + '" value="' + (p.hi || "") + '">' +
       '</div><a class="sell" href="https://myaccount.ticketmaster.com/" target="_blank" rel="noopener">Sell</a></div>' +
-      '<div class="links">' +
+      vendorHTML(g, p) + '<div class="links">' +
+        '<label class="chk soldchk"><input type="checkbox" data-soldchk="' + esc(g) + '"' + (fullySold(T, g) ? ' checked' : '') + '> ' + (sale && left > 0 ? 'Fully sold' : 'Sold') + '</label>' +
         '<a href="https://www.ticketmaster.com/search?q=' + enc(q) + '" target="_blank" rel="noopener">Ticketmaster</a>' +
         '<a href="https://www.stubhub.com/secure/search?q=' + enc(q) + '" target="_blank" rel="noopener">StubHub</a>' +
         '<a href="https://seatgeek.com/search?search=' + enc(q) + '" target="_blank" rel="noopener">SeatGeek</a>' +
@@ -210,7 +231,7 @@
   function saleText(x) { return "Sold " + x.n + " × " + money(x.price) + " · net " + money(Math.round(x.n * net(x.price, x.mk) * 100) / 100) + " after " + mkName(x.mk); }
   function paintNet(G) {
     var el = $("nt-" + G.id); if (!el) return;
-    var p = prices()[G.id] || {}, lo = parseFloat(p.lo), parts = [], mk = state.prefs.usual;
+    var p = prices()[G.id] || {}, lo = myLow(p), parts = [], mk = state.prefs.usual;
     if (!isNaN(lo) && lo > 0) parts.push("your low nets ≈ " + money(Math.round(net(lo, mk))) + " on " + mkName(mk) + " (" + fee(mk) + "% fee)");
     el.textContent = parts.join(" · ");
   }
@@ -376,11 +397,17 @@
       $("notifStatus").textContent = s.enabled ? "Notifications are on. SeatSeller checks for new alerts about every 3 hours." : "Notifications are off. Turn them on to hear about games that are selling fast.";
       $("checkResult").textContent = s.lastCheck ? "Last check " + fmtTime(s.lastCheck) + (s.lastResult ? " · " + s.lastResult : "") : "No background check yet.";
       $("testBtn").disabled = !s.enabled;
+      var bad = s.enabled && (s.channelBlocked || s.batteryUnrestricted === false);
+      $("bgBanner").hidden = !bad;
+      if (bad) $("bgMsg").textContent = s.channelBlocked ? "The SeatSeller notification channel is switched off in Android settings, so alerts are silenced." : "Android battery saver can delay or drop SeatSeller reminders. Set it to Unrestricted.";
+      if (!s.enabled && !state.prefs.askedNotif) { state.prefs.askedNotif = true; save(); Native.requestPermission().then(paintNative).catch(function () {}); }
     }).catch(function () {});
   }
   function wireNative() {
     if (!Native) { $("testBtn").disabled = true; $("checkBtn").disabled = true; return; }
     $("permBtn").addEventListener("click", function () { Native.requestPermission().then(paintNative).catch(paintNative); });
+    $("bgBtn").addEventListener("click", function () { Native.openBatterySettings().catch(function () {}); });
+    $("alarmTestBtn").addEventListener("click", function () { Native.testAlarm().then(function () { toast("Close SeatSeller now. A notification should arrive within about a minute."); }).catch(function () { toast("Couldn't schedule the test"); }); });
     $("testBtn").addEventListener("click", function () { Native.testNotification().then(paintNative).catch(function () {}); });
     $("checkBtn").addEventListener("click", function () {
       var b = $("checkBtn"); b.disabled = true; $("checkResult").textContent = "Checking…";
@@ -505,6 +532,17 @@
     $("list").addEventListener("change", function (e) {
       var el = e.target;
       if (el.dataset && el.dataset.after) { logAfter(el.dataset.after, parseFloat(el.value)); return; }
+      if (el.dataset && el.dataset.soldchk) {
+        var sg = el.dataset.soldchk, T0 = team();
+        if (el.checked) { openSold(sg); return; }
+        if (confirm("Remove the recorded sale(s) for this game and count the seats as unsold?")) { setSales(T0, sg, []); save(); }
+        render(); return;
+      }
+      if (el.dataset && el.dataset.vk) {
+        var vg = el.dataset.g, vp = prices()[vg] = prices()[vg] || {}; vp.v = vp.v || {}; var vq = vp.v[el.dataset.vk] = vp.v[el.dataset.vk] || {};
+        var vv = parseFloat(el.value); if (isNaN(vv)) delete vq[el.dataset.vf]; else vq[el.dataset.vf] = String(vv);
+        vq.t = Date.now(); save(); render(); return;
+      }
       if (el.dataset && el.dataset.k === "lo") {
         var lo = parseFloat(el.value), gg = el.dataset.g, pp = prices()[gg] = prices()[gg] || {};
         if (!isNaN(lo)) { pp.lh = pp.lh || []; var ll = pp.lh[pp.lh.length - 1], nw = Date.now(); if (ll && new Date(ll[0]).toDateString() === new Date(nw).toDateString()) ll[1] = lo; else pp.lh.push([nw, lo]); pp.lh = pp.lh.slice(-60); save(); var G1 = gameById(gg); if (G1) { paintSpark(G1); paintAdvice(G1); } }
@@ -607,7 +645,7 @@
   function advice(T, G) {
     var g = G.id, n = daysAway(G.date), leftN = seatsLeft(T, g), part = soldN(T, g) > 0;
     if (fullySold(T, g)) return {cls: "good", head: "Sold", why: ""};
-    var p = (state.prices[T.id] || {})[g] || {}, mine = parseFloat(p.lo), m = marketFor(G, T), mk = m && m.low != null ? +m.low : NaN;
+    var p = (state.prices[T.id] || {})[g] || {}, mine = myLow(p), m = marketFor(G, T), mk = m && m.low != null ? +m.low : NaN;
     var price = !isNaN(mine) ? mine : mk, src = !isNaN(mine) ? "your logged low" : "the market low";
     var face = parseFloat(T.face), fast = fastInfo(G, T), dem = demand(T, G);
     if (isNaN(price)) return {cls: "", head: "No advice yet", why: "Log a price for your section or wait for the market low."};
@@ -690,7 +728,7 @@
     return new Promise(function (res) { var ta = document.createElement("textarea"); ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e) {} ta.remove(); res(); });
   }
   function suggest(T, G) {
-    var p = (state.prices[T.id] || {})[G.id] || {}, mine = parseFloat(p.lo), m = marketFor(G, T), mk = m && m.low != null ? +m.low : NaN, face = parseFloat(T.face), f = fee(state.prefs.usual);
+    var p = (state.prices[T.id] || {})[G.id] || {}, mine = myLow(p), m = marketFor(G, T), mk = m && m.low != null ? +m.low : NaN, face = parseFloat(T.face), f = fee(state.prefs.usual);
     return {price: !isNaN(mine) ? Math.max(1, Math.round(mine) - 1) : (!isNaN(mk) ? Math.ceil(mk * 1.2) : null), floor: !isNaN(face) && face > 0 ? Math.ceil(face / (1 - f / 100)) : null};
   }
   function afterRows(g, sales) {
@@ -797,7 +835,7 @@
   /* ---------- sell queue, weekly check, setup, self-test, digest ---------- */
   function expectedProfit(T, G) {
     var face = parseFloat(T.face); if (isNaN(face) || face <= 0 || fullySold(T, G.id)) return null;
-    var p = (state.prices[T.id] || {})[G.id] || {}, mine = parseFloat(p.lo), m = marketFor(G, T), mk = m && m.low != null ? +m.low : NaN, ask = parseFloat(p.ask), price = !isNaN(ask) ? ask : !isNaN(mine) ? mine : mk;
+    var p = (state.prices[T.id] || {})[G.id] || {}, mine = myLow(p), m = marketFor(G, T), mk = m && m.low != null ? +m.low : NaN, ask = parseFloat(p.ask), price = !isNaN(ask) ? ask : !isNaN(mine) ? mine : mk;
     if (isNaN(price)) return null;
     var each = price * (1 - fee(state.prefs.usual) / 100) - face;
     return {each: each, total: each * seatsLeft(T, G.id), price: price};
@@ -878,6 +916,10 @@
       if (s.lastResult) add(!/^Failed/.test(s.lastResult), "Last check result: " + s.lastResult);
       add(state.prefs.digestOn === false || s.nextDigestAt > Date.now(), state.prefs.digestOn === false ? "Daily digest is off" : s.nextDigestAt > Date.now() ? "Next daily digest: " + fmtTime(s.nextDigestAt) : "Daily digest is not scheduled. Open Settings and change the hour to re-arm it");
       add(state.prefs.weeklyOn === false || s.nextWeeklyAt > Date.now(), state.prefs.weeklyOn === false ? "Weekly reminder is off" : s.nextWeeklyAt > Date.now() ? "Next weekly reminder: " + fmtTime(s.nextWeeklyAt) : "Weekly reminder is not scheduled");
+      add(!s.channelBlocked, s.channelBlocked ? "The SeatSeller notification channel is turned off in Android settings" : "Notification channel is on");
+      add(s.exactAlarms !== false, s.exactAlarms === false ? "Exact alarms are not allowed, so reminders may be a few minutes late" : "Alarms can fire on time");
+      if (s.lastNotify) { var ln = s.lastNotify.split("|"); add(ln[0].indexOf("BLOCKED") !== 0, "Last notification: " + ln[0] + " (" + fmtTime(+ln[1]) + ")"); } else add(false, "SeatSeller has never posted a notification on this phone");
+      add(!!s.lastFiredAt, s.lastFiredAt ? "Last scheduled alarm fired " + fmtTime(s.lastFiredAt) + " (" + s.lastFiredKind + ")" : "No scheduled alarm has fired yet. Run the alarm test");
       add(!!s.batteryUnrestricted, s.batteryUnrestricted ? "Battery: SeatSeller is allowed to run in the background" : "Battery saver may delay or drop notifications. Tap Allow background activity in Settings");
       return Native.getBackupStatus().catch(function () { return {}; });
     }).then(function (b) {
@@ -1078,6 +1120,8 @@
     // profit
     $("profitBtn").addEventListener("click", function () { $("profitBody").innerHTML = profitHTML(); openDlg($("profitDlg")); });
     // new features
+    $("soldDlg").addEventListener("close", function () { render(); });
+    $("list").addEventListener("toggle", function (e) { var d = e.target; if (d && d.dataset && d.dataset.vg) openVend[d.dataset.vg] = d.open; }, true);
     $("queueBtn").addEventListener("click", function () { $("queueBody").innerHTML = queueHTML(); openDlg($("queueDlg")); });
     $("weeklyBtn").addEventListener("click", openWeekly);
     $("wkNext").addEventListener("click", function (e) { e.preventDefault(); saveWeekly(); if (wkI < wkList.length - 1) { wkI++; paintWeekly(); } else { closeDlg($("weeklyDlg")); render(); toast("Weekly check done"); } });

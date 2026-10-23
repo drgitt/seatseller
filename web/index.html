@@ -40,6 +40,10 @@
     <button type="button" id="permBtn" class="btn">Turn on</button>
   </div>
 
+  <div class="banner" id="bgBanner" hidden>
+    <span id="bgMsg"></span>
+    <button type="button" id="bgBtn" class="btn">Fix</button>
+  </div>
   <div class="banner" id="staleBanner" hidden></div>
 
   <section class="alerts" id="alerts" hidden aria-label="Recent alerts"></section>
@@ -140,6 +144,7 @@
         <div class="btn-row">
           <button type="button" class="btn" id="testBtn">Send test</button>
           <button type="button" class="btn" id="checkBtn">Check prices now</button>
+          <button type="button" class="btn ghost" id="alarmTestBtn">Test alarm (1 min)</button>
           <button type="button" class="btn ghost" id="selfTestBtn">Run self-test</button>
         </div>
         <div class="notif-line mono" id="checkResult"></div>
