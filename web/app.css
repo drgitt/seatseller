@@ -171,3 +171,6 @@ a.btn{text-decoration:none;display:inline-block}
 .soldchk{display:inline-flex;align-items:center;gap:6px;font-weight:600}
 .vrow .vn{width:92px;color:inherit;font-weight:600;text-decoration:underline}
 .links{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.vend summary{list-style:revert}
+.vrow input{width:66px}
+.vrow .vn{width:84px}

@@ -111,16 +111,36 @@
     return "#";
   }
   function vendorHTML(g, p, T, G) {
-    var rows = "", best = null;
+    var rows = "", best = null, filled = 0;
     VENDORS.forEach(function (x) {
       var q = (p.v && p.v[x[0]]) || {}, lo = parseFloat(q.lo), nt = isNaN(lo) ? null : lo * (1 - fee(x[0]) / 100), direct = T.id === "wiz" && G.builtin && (LINKS["g" + G.id] || {})[x[0]];
       if (nt != null && (!best || nt > best.nt)) best = {name: x[1], nt: nt};
+      if (q.lo || q.hi || q.seats) filled++;
       rows += '<div class="vrow"><a class="vn" href="' + esc(vendorURL(x[0], T, G)) + '" target="_blank" rel="noopener" title="' + (direct ? "Opens this game" : "Opens the search or team page") + '">' + x[1] + '</a>' +
+        '<input type="number" inputmode="numeric" min="0" step="1" placeholder="Seats" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="seats" aria-label="' + x[1] + ' seats available" value="' + (q.seats || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" placeholder="Low $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="lo" aria-label="' + x[1] + ' low" value="' + (q.lo || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" placeholder="High $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="hi" aria-label="' + x[1] + ' high" value="' + (q.hi || "") + '">' +
         '<span class="vnet">' + (nt == null ? "" : "nets " + money(Math.round(nt * 100) / 100)) + '</span></div>';
     });
-    return '<div class="vend">' + rows + (best ? '<div class="hint">Best net at the low price: ' + best.name + ' about ' + money(Math.round(best.nt * 100) / 100) + ' a seat after fees.</div>' : '') + '</div>';
+    return '<details class="vend" data-vg="' + esc(g) + '"' + (openVend[g] ? ' open' : '') + '><summary>Ticket sellers' + (filled ? ' · ' + filled + ' entered' : '') + '</summary>' + rows + (best ? '<div class="hint">Best net at the low price: ' + best.name + ' about ' + money(Math.round(best.nt * 100) / 100) + ' a seat after fees.</div>' : '') + '</details>';
+  }
+  /* Top Seats / Low / High are rolled up from the ticket seller lines: seats summed, lowest low, highest high. */
+  function aggregateVendors(g) {
+    var p = prices()[g]; if (!p || !p.v) return;
+    var lo = NaN, hi = NaN, seats = 0, anySeats = false, now = Date.now();
+    VENDORS.forEach(function (x) {
+      var q = p.v[x[0]]; if (!q) return;
+      var l = parseFloat(q.lo), h = parseFloat(q.hi), n = parseInt(q.seats, 10);
+      if (!isNaN(l) && (isNaN(lo) || l < lo)) lo = l;
+      if (!isNaN(h) && (isNaN(hi) || h > hi)) hi = h;
+      if (!isNaN(n) && n >= 0) { seats += n; anySeats = true; }
+    });
+    var set = function (id, v) { var el = $(id + g); if (el) el.value = v; };
+    if (!isNaN(lo)) { p.lo = String(lo); set("lo-", p.lo); p.lh = p.lh || []; var ll = p.lh[p.lh.length - 1]; if (ll && new Date(ll[0]).toDateString() === new Date(now).toDateString()) ll[1] = lo; else p.lh.push([now, lo]); p.lh = p.lh.slice(-60); }
+    else { delete p.lo; set("lo-", ""); }
+    if (!isNaN(hi)) { p.hi = String(hi); set("hi-", p.hi); } else { delete p.hi; set("hi-", ""); }
+    if (anySeats) { p.seats = String(seats); set("se-", p.seats); p.hist = p.hist || []; var last = p.hist[p.hist.length - 1]; if (last && new Date(last.t).toDateString() === new Date(now).toDateString()) { last.n = seats; last.t = now; } else p.hist.push({n: seats, t: now}); p.hist = p.hist.slice(-14); }
+    else { delete p.seats; set("se-", ""); }
   }
   function salesOf(T, g) { var v = (state.sales[T.id] || {})[g]; return !v ? [] : Array.isArray(v) ? v : [v]; }
   function setSales(T, g, arr) { var S = state.sales[T.id] || (state.sales[T.id] = {}); if (arr.length) S[g] = arr; else delete S[g]; }
@@ -546,7 +566,11 @@
       if (el.dataset && el.dataset.vk) {
         var vg = el.dataset.g, vp = prices()[vg] = prices()[vg] || {}; vp.v = vp.v || {}; var vq = vp.v[el.dataset.vk] = vp.v[el.dataset.vk] || {};
         var vv = parseFloat(el.value); if (isNaN(vv)) delete vq[el.dataset.vf]; else vq[el.dataset.vf] = String(vv);
-        vq.t = Date.now(); save(); render(); return;
+        vq.t = Date.now(); aggregateVendors(vg); save();
+        var VG = gameById(vg); if (VG) { paintFast(VG); paintNet(VG); paintAdvice(VG); paintSpark(VG); paintSpike(VG); }
+        var nt = el.parentNode.querySelector(".vnet"); if (nt) { var vl = parseFloat((vp.v[el.dataset.vk] || {}).lo); nt.textContent = isNaN(vl) ? "" : "nets " + money(Math.round(vl * (1 - fee(el.dataset.vk) / 100) * 100) / 100); }
+        var sm = el.closest("details"); if (sm) sm.querySelector("summary").textContent = "Ticket sellers" + (function () { var c = 0; VENDORS.forEach(function (x) { var q = vp.v[x[0]]; if (q && (q.lo || q.hi || q.seats)) c++; }); return c ? " · " + c + " entered" : ""; })();
+        stats(); return;
       }
       if (el.dataset && el.dataset.k === "lo") {
         var lo = parseFloat(el.value), gg = el.dataset.g, pp = prices()[gg] = prices()[gg] || {};
@@ -1125,6 +1149,7 @@
     // profit
     $("profitBtn").addEventListener("click", function () { $("profitBody").innerHTML = profitHTML(); openDlg($("profitDlg")); });
     // new features
+    $("list").addEventListener("toggle", function (e) { var d = e.target; if (d && d.dataset && d.dataset.vg) openVend[d.dataset.vg] = d.open; }, true);
     $("soldDlg").addEventListener("close", function () { render(); });
     $("queueBtn").addEventListener("click", function () { $("queueBody").innerHTML = queueHTML(); openDlg($("queueDlg")); });
     $("weeklyBtn").addEventListener("click", openWeekly);
