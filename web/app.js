@@ -28,7 +28,7 @@
   var MKTS = [["TM","Ticketmaster",15],["SH","StubHub",10],["SG","SeatGeek",10],["VS","Vivid Seats",10],["TP","TickPick",10],["OT","Other",10]];
   var state = {v: 2, active: "wiz", all: false, teams: [WIZ], prices: {}, sales: {}, mhist: {}, prefs: {theme: "system", weeks: 3, view: "soon", drop: 25, jump: 15, usual: "TM", calName: "Ticketmaster", gameHour: 20, weeklyOn: true, weeklyDay: 1, weeklyHour: 10, target: 10, digestOn: true, digestHour: 8, setupDone: false, listDays: 3, lastCall: true, sort: "date", spike: 25, weather: true, fees: {TM: 15, SH: 10, SG: 10, VS: 10, TP: 10, OT: 10}}};
   var RECORDS = {}, SCHED = {}, HIST = {}, WX = {};
-  var MARKET = {}, ALERTS = [], UPDATED = null, FETCH_NOTE = "";
+  var LINKS = {}, MARKET = {}, ALERTS = [], UPDATED = null, FETCH_NOTE = "";
   var Native = null;
 
   try {
@@ -71,7 +71,7 @@
   }
   function backupJSON() { return JSON.stringify({app: "SeatSeller", version: 1, exportedAt: new Date().toISOString(), state: state}); }
   function applyPrices(p) {
-    MARKET = (p && p.games) || {}; ALERTS = (p && p.alerts) || []; UPDATED = (p && p.updatedAt) || null; RECORDS = (p && p.records) || {}; HIST = (p && p.history) || {};
+    LINKS = (p && p.links) || {}; MARKET = (p && p.games) || {}; ALERTS = (p && p.alerts) || []; UPDATED = (p && p.updatedAt) || null; RECORDS = (p && p.records) || {}; HIST = (p && p.history) || {};
     SCHED = {}; ((p && p.scheduleChanges) || []).forEach(function (c) { if (c && c.game != null && c.to) SCHED["g" + c.game] = c; });
   }
 
@@ -99,19 +99,28 @@
     var best = NaN; VENDORS.forEach(function (x) { var q = p && p.v && p.v[x[0]], l = q ? parseFloat(q.lo) : NaN; if (!isNaN(l) && (isNaN(best) || l < best)) best = l; });
     return best;
   }
-  function vendorHTML(g, p) {
-    var rows = "", filled = 0, best = null;
+  var VTP_TEAM = "https://www.tickpick.com/nba/washington-wizards-tickets/", VVS_TEAM = "https://www.vividseats.com/washington-wizards-tickets--sports-nba-basketball/performer/926";
+  function vendorURL(vk, T, G) {
+    var q = encodeURIComponent(T.name + " " + G.opp), wiz = T.id === "wiz", L = wiz && G.builtin ? (LINKS["g" + G.id] || {}) : {};
+    if (L[vk]) return L[vk];
+    if (vk === "TM") return "https://www.ticketmaster.com/search?q=" + q;
+    if (vk === "SH") return "https://www.stubhub.com/secure/search?q=" + q;
+    if (vk === "SG") return "https://seatgeek.com/search?search=" + q;
+    if (vk === "VS") return wiz ? VVS_TEAM : "https://www.vividseats.com/search?searchTerm=" + q;
+    if (vk === "TP") return wiz ? VTP_TEAM : "https://www.tickpick.com/search?q=" + q;
+    return "#";
+  }
+  function vendorHTML(g, p, T, G) {
+    var rows = "", best = null;
     VENDORS.forEach(function (x) {
-      var q = (p.v && p.v[x[0]]) || {}, lo = parseFloat(q.lo), nt = isNaN(lo) ? null : lo * (1 - fee(x[0]) / 100);
-      if (q.lo || q.hi) filled++;
+      var q = (p.v && p.v[x[0]]) || {}, lo = parseFloat(q.lo), nt = isNaN(lo) ? null : lo * (1 - fee(x[0]) / 100), direct = T.id === "wiz" && G.builtin && (LINKS["g" + G.id] || {})[x[0]];
       if (nt != null && (!best || nt > best.nt)) best = {name: x[1], nt: nt};
-      rows += '<div class="vrow"><span class="vn">' + x[1] + '</span>' +
+      rows += '<div class="vrow"><a class="vn" href="' + esc(vendorURL(x[0], T, G)) + '" target="_blank" rel="noopener" title="' + (direct ? "Opens this game" : "Opens the search or team page") + '">' + x[1] + '</a>' +
         '<input type="number" inputmode="decimal" min="0" placeholder="Low $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="lo" aria-label="' + x[1] + ' low" value="' + (q.lo || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" placeholder="High $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="hi" aria-label="' + x[1] + ' high" value="' + (q.hi || "") + '">' +
         '<span class="vnet">' + (nt == null ? "" : "nets " + money(Math.round(nt * 100) / 100)) + '</span></div>';
     });
-    return '<details class="vend" data-vg="' + esc(g) + '"' + (openVend[g] ? ' open' : '') + '><summary>Vendor prices' + (filled ? ' · ' + filled + ' entered' : '') + '</summary>' + rows +
-      (best ? '<div class="hint">Best net at the low price: ' + best.name + ' about ' + money(Math.round(best.nt * 100) / 100) + ' a seat after fees.</div>' : '') + '</details>';
+    return '<div class="vend">' + rows + (best ? '<div class="hint">Best net at the low price: ' + best.name + ' about ' + money(Math.round(best.nt * 100) / 100) + ' a seat after fees.</div>' : '') + '</div>';
   }
   function salesOf(T, g) { var v = (state.sales[T.id] || {})[g]; return !v ? [] : Array.isArray(v) ? v : [v]; }
   function setSales(T, g, arr) { var S = state.sales[T.id] || (state.sales[T.id] = {}); if (arr.length) S[g] = arr; else delete S[g]; }
@@ -217,15 +226,11 @@
         '<input type="number" inputmode="decimal" min="0" id="ask-' + g + '" data-g="' + esc(g) + '" data-k="ask" placeholder="Asking $" aria-label="My asking price for ' + esc(name) + '" value="' + (p.ask || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" id="hi-' + g + '" data-g="' + esc(g) + '" data-k="hi" placeholder="High $" aria-label="Highest price in my rows for ' + esc(name) + '" value="' + (p.hi || "") + '">' +
       '</div><a class="sell" href="https://myaccount.ticketmaster.com/" target="_blank" rel="noopener">Sell</a></div>' +
-      vendorHTML(g, p) + '<div class="links">' +
+      '<div class="links">' +
         '<label class="chk soldchk"><input type="checkbox" data-soldchk="' + esc(g) + '"' + (fullySold(T, g) ? ' checked' : '') + '> ' + (sale && left > 0 ? 'Fully sold' : 'Sold') + '</label>' +
-        '<a href="https://www.ticketmaster.com/search?q=' + enc(q) + '" target="_blank" rel="noopener">Ticketmaster</a>' +
-        '<a href="https://www.stubhub.com/secure/search?q=' + enc(q) + '" target="_blank" rel="noopener">StubHub</a>' +
-        '<a href="https://seatgeek.com/search?search=' + enc(q) + '" target="_blank" rel="noopener">SeatGeek</a>' +
-        '<a href="https://www.vividseats.com/search?searchTerm=' + enc(q) + '" target="_blank" rel="noopener">Vivid Seats</a>' +
         (left > 0 ? '<button type="button" class="lb" data-sold="' + esc(g) + '">' + (sale ? 'Sell remaining' : 'Mark sold') + '</button>' : '') +
         '<button type="button" class="lb" data-cal="' + esc(g) + '">Calendar</button>' +
-      '</div></div>';
+      '</div>' + vendorHTML(g, p, T, G) + '</div>';
   }
 
   function saleText(x) { return "Sold " + x.n + " × " + money(x.price) + " · net " + money(Math.round(x.n * net(x.price, x.mk) * 100) / 100) + " after " + mkName(x.mk); }
@@ -1121,7 +1126,6 @@
     $("profitBtn").addEventListener("click", function () { $("profitBody").innerHTML = profitHTML(); openDlg($("profitDlg")); });
     // new features
     $("soldDlg").addEventListener("close", function () { render(); });
-    $("list").addEventListener("toggle", function (e) { var d = e.target; if (d && d.dataset && d.dataset.vg) openVend[d.dataset.vg] = d.open; }, true);
     $("queueBtn").addEventListener("click", function () { $("queueBody").innerHTML = queueHTML(); openDlg($("queueDlg")); });
     $("weeklyBtn").addEventListener("click", openWeekly);
     $("wkNext").addEventListener("click", function (e) { e.preventDefault(); saveWeekly(); if (wkI < wkList.length - 1) { wkI++; paintWeekly(); } else { closeDlg($("weeklyDlg")); render(); toast("Weekly check done"); } });

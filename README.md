@@ -65,6 +65,10 @@ A navy ticket splash shows while the app loads and stays for at least one second
 - **Vendor prices:** each card has a Vendor prices section with its own Low and High line for Ticketmaster, StubHub, SeatGeek, Vivid Seats and TickPick, what each nets after its fee, and which vendor nets the most. If you leave your own section Low blank, the cheapest vendor low is used for advice.
 - **Notification diagnostics:** Settings → Test alarm (1 min) schedules a real alarm so you can close the app and see if it arrives. The self-test reports the last notification posted, the last alarm that fired, blocked channels, battery restrictions and exact-alarm access. Alarms are exact-time where Android allows.
 
+### Vendor links
+- The vendor names next to the Low/High boxes are the links (Ticketmaster, StubHub, SeatGeek, Vivid Seats, TickPick); there is no separate link row. The Sold checkbox, Mark sold and Calendar share one line above them.
+- Vivid Seats and TickPick open the exact game when the feed has its link (`links` in `data/prices.json`, filled for the games those sites currently list). Otherwise they open the Wizards team page on that site. Other teams open that site's search.
+
 ### Selling workflow
 - **Profit target:** set the margin over face you want (default 10%). Advice thresholds follow it.
 - **Sell queue:** ranks games by the profit you would pocket after fees on the seats you still own.

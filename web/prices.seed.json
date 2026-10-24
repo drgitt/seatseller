@@ -46,5 +46,43 @@
   "Washington Wizards": "0-0"
  },
  "recordsAt": "2026-10-17T20:00:00-04:00",
- "scheduleChanges": []
+ "scheduleChanges": [],
+ "links": {
+  "g1": {
+   "TP": "https://www.tickpick.com/buy-washington-wizards-vs-milwaukee-bucks-tickets-capital-one-arena-10-21-26-7pm/8206006/"
+  },
+  "g2": {
+   "TP": "https://www.tickpick.com/buy-washington-wizards-vs-toronto-raptors-tickets-capital-one-arena-10-23-26-7pm/8206008/"
+  },
+  "g6": {
+   "TP": "https://www.tickpick.com/buy-nba-cup-washington-wizards-vs-charlotte-hornets-tickets-capital-one-arena-10-30-26-7pm/8200157/",
+   "VS": "https://www.vividseats.com/washington-wizards-tickets-capital-one-arena-10-31-2026--sports-nba-basketball/production/7419803"
+  },
+  "g8": {
+   "TP": "https://www.tickpick.com/buy-washington-wizards-vs-atlanta-hawks-tickets-capital-one-arena-11-4-26-7pm/8206011/",
+   "VS": "https://www.vividseats.com/washington-wizards-tickets-capital-one-arena-11-4-2026/production/7433028"
+  },
+  "g13": {
+   "TP": "https://www.tickpick.com/buy-washington-wizards-vs-detroit-pistons-tickets-capital-one-arena-11-12-26-7pm/8206013/",
+   "VS": "https://www.vividseats.com/washington-wizards-tickets-capital-one-arena-11-12-2026/production/7433034"
+  },
+  "g14": {
+   "VS": "https://www.vividseats.com/washington-wizards-tickets-capital-one-arena-11-15-2026/production/7432963"
+  },
+  "g15": {
+   "VS": "https://www.vividseats.com/washington-wizards-tickets-capital-one-arena-11-16-2026/production/7433036"
+  },
+  "g18": {
+   "VS": "https://www.vividseats.com/washington-wizards-tickets-capital-one-arena-11-22-2026/production/7433044"
+  },
+  "g19": {
+   "VS": "https://www.vividseats.com/washington-wizards-tickets-capital-one-arena-10-30-2026--sports-nba-basketball/production/7419797"
+  },
+  "g20": {
+   "VS": "https://www.vividseats.com/washington-wizards-tickets-capital-one-arena-11-28-2026/production/7431044"
+  },
+  "g25": {
+   "VS": "https://www.vividseats.com/washington-wizards-tickets-capital-one-arena-12-12-2026/production/7431732"
+  }
+ }
 }

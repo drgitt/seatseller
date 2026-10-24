@@ -169,3 +169,5 @@ a.btn{text-decoration:none;display:inline-block}
 .vrow input{width:80px;padding:6px}
 .vrow .vnet{font-size:12px;opacity:.75}
 .soldchk{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.vrow .vn{width:92px;color:inherit;font-weight:600;text-decoration:underline}
+.links{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
