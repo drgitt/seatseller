@@ -96,7 +96,7 @@ input:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visibl
 .foot { font-size: 12px; color: var(--muted); margin: 0; }
 @media (min-width: 640px) {
   .game { grid-template-columns: 74px minmax(0, 1fr) auto; }
-  .act { grid-column: auto; justify-content: flex-end; }
+  .act { grid-column: 2 / -1; justify-content: space-between; }
   .links { grid-column: 2 / -1; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -174,3 +174,6 @@ a.btn{text-decoration:none;display:inline-block}
 .vend summary{list-style:revert}
 .vrow input{width:66px}
 .vrow .vn{width:84px}
+
+button.sell{border:0;font-family:inherit;cursor:pointer}
+.tagbox{display:inline-block;border:1px solid #000;border-radius:8px;background:#f4f4f4;color:#111;padding:2px 9px;font-size:12px;line-height:1.5}

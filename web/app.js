@@ -235,7 +235,7 @@
     pills += '<span class="pill hot" id="fast-' + g + '" hidden></span>';
     pills += '<span class="pill ' + sig[1] + '" id="sig-' + g + '">' + sig[0] + '</span>';
     pills += '<span class="mk" id="mk-' + g + '"></span><span class="mk" id="sd-' + g + '"></span><span class="mk" id="nt-' + g + '"></span>';
-    var tag = G.tag ? '<span>' + esc(G.tag) + '</span>' : '';
+    var tag = G.tag ? '<span class="tagbox">' + esc(G.tag) + '</span>' : '';
     var idl = G.builtin ? '<span class="mono">G' + g + '</span>' : '<button type="button" class="x" data-del="' + esc(g) + '" aria-label="Remove game vs ' + esc(name) + '">Remove</button>';
     return '<div class="' + cls + '" id="g' + g + '">' +
       '<div class="date"><span class="dow">' + DOW[d.getDay()] + '</span><span class="dnum">' + d.getDate() + '</span></div>' +
@@ -248,8 +248,7 @@
       '</div><a class="sell" href="https://myaccount.ticketmaster.com/" target="_blank" rel="noopener">Sell</a></div>' +
       '<div class="links">' +
         '<label class="chk soldchk"><input type="checkbox" data-soldchk="' + esc(g) + '"' + (fullySold(T, g) ? ' checked' : '') + '> ' + (sale && left > 0 ? 'Fully sold' : 'Sold') + '</label>' +
-        (left > 0 ? '<button type="button" class="lb" data-sold="' + esc(g) + '">' + (sale ? 'Sell remaining' : 'Mark sold') + '</button>' : '') +
-        '<button type="button" class="lb" data-cal="' + esc(g) + '">Calendar</button>' +
+        '<button type="button" class="sell" data-cal="' + esc(g) + '">Add to Calendar</button>' +
       '</div>' + vendorHTML(g, p, T, G) + '</div>';
   }
 
@@ -264,12 +263,7 @@
     var g = G.id, el = $("fast-" + g), sd = $("sd-" + g); if (!el || !sd) return;
     var why = fastInfo(G);
     if (why.length) { el.hidden = false; el.textContent = "Selling fast · " + why[0]; } else { el.hidden = true; el.textContent = ""; }
-    var h = (prices()[g] || {}).hist || [];
-    if (h.length) {
-      var last = h[h.length - 1], t = "Mine: " + last.n + " seats";
-      if (h.length > 1) { var d = last.n - h[h.length - 2].n; t += " (" + (d > 0 ? "+" : d < 0 ? "−" : "±") + Math.abs(d) + " since " + fmtDay(h[h.length - 2].t) + ")"; }
-      sd.textContent = t;
-    } else { sd.textContent = ""; }
+    sd.textContent = "";
   }
 
   function paintMarkets() {
