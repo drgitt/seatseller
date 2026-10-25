@@ -236,7 +236,7 @@
     pills += '<span class="pill ' + sig[1] + '" id="sig-' + g + '">' + sig[0] + '</span>';
     pills += '<span class="mk" id="mk-' + g + '"></span><span class="mk" id="sd-' + g + '"></span><span class="mk" id="nt-' + g + '"></span>';
     var tag = G.tag ? '<span class="tagbox">' + esc(G.tag) + '</span>' : '';
-    var idl = G.builtin ? '<span class="mono">G' + g + '</span>' : '<button type="button" class="x" data-del="' + esc(g) + '" aria-label="Remove game vs ' + esc(name) + '">Remove</button>';
+    var idl = G.builtin ? '' : '<button type="button" class="x" data-del="' + esc(g) + '" aria-label="Remove game vs ' + esc(name) + '">Remove</button>';
     return '<div class="' + cls + '" id="g' + g + '">' +
       '<div class="date"><span class="dow">' + DOW[d.getDay()] + '</span><span class="dnum">' + d.getDate() + '</span></div>' +
       '<div class="who"><div class="opp">vs ' + esc(name) + '</div><div class="rec" id="rec-' + g + '">' + esc(recText(T, G)) + '</div><div class="advice" id="adv-' + g + '"></div><div class="meta">' + pills + tag + idl + '</div><div class="spark" id="sp-' + g + '"></div>' + (sale ? afterRows(g, sales) : '') + '</div>' +
@@ -245,9 +245,10 @@
         '<input type="number" inputmode="decimal" min="0" id="lo-' + g + '" data-g="' + esc(g) + '" data-k="lo" placeholder="Low $" aria-label="Lowest price in my rows for ' + esc(name) + '" value="' + (p.lo || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" id="ask-' + g + '" data-g="' + esc(g) + '" data-k="ask" placeholder="Asking $" aria-label="My asking price for ' + esc(name) + '" value="' + (p.ask || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" id="hi-' + g + '" data-g="' + esc(g) + '" data-k="hi" placeholder="High $" aria-label="Highest price in my rows for ' + esc(name) + '" value="' + (p.hi || "") + '">' +
-      '</div><a class="sell" href="https://myaccount.ticketmaster.com/" target="_blank" rel="noopener">Sell</a></div>' +
+      '</div></div>' +
       '<div class="links">' +
         '<label class="chk soldchk"><input type="checkbox" data-soldchk="' + esc(g) + '"' + (fullySold(T, g) ? ' checked' : '') + '> ' + (sale && left > 0 ? 'Fully sold' : 'Sold') + '</label>' +
+        '<a class="sell" href="https://myaccount.ticketmaster.com/" target="_blank" rel="noopener">Sell</a>' +
         '<button type="button" class="sell" data-cal="' + esc(g) + '">Add to Calendar</button>' +
       '</div>' + vendorHTML(g, p, T, G) + '</div>';
   }

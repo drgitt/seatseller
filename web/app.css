@@ -96,8 +96,7 @@ input:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visibl
 .foot { font-size: 12px; color: var(--muted); margin: 0; }
 @media (min-width: 640px) {
   .game { grid-template-columns: 74px minmax(0, 1fr) auto; }
-  .act { grid-column: 2 / -1; justify-content: space-between; }
-  .links { grid-column: 2 / -1; }
+
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
@@ -177,3 +176,17 @@ a.btn{text-decoration:none;display:inline-block}
 
 button.sell{border:0;font-family:inherit;cursor:pointer}
 .tagbox{display:inline-block;border:1px solid #000;border-radius:8px;background:#f4f4f4;color:#111;padding:2px 9px;font-size:12px;line-height:1.5}
+
+/* indented rows, fixed-width notes box that matches the price line */
+.act, .links, .vend { grid-column: 2 / -1; }
+.act { justify-content: flex-start; }
+.prices { width: 100%; max-width: 306px; }
+.prices input { flex: 1 1 0; min-width: 0; width: auto; box-sizing: border-box; }
+.links { width: 100%; max-width: 306px; justify-content: space-between; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.links .sell { padding: 9px 12px; font-size: 12px; }
+.tagbox { display: block; flex: 0 0 100%; box-sizing: border-box; width: 100%; max-width: 306px; height: 46px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; padding: 6px 10px; margin-top: 4px; font-size: 12px; line-height: 1.4; }
+.links a.sell { color: var(--bg); }
+.links .sell { letter-spacing: 0; padding: 9px 8px; font-size: 11px; }
+.links .soldchk { gap: 4px; font-size: 13px; }
+.prices input { font-size: 13px; padding: 8px 4px; text-align: center; }
+.prices input::placeholder { font-size: 11px; }
