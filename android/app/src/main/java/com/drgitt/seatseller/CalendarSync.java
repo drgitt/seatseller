@@ -73,7 +73,7 @@ final class CalendarSync {
         for (int k = 0; k < events.length(); k++) {
             JSONObject e = events.getJSONObject(k);
             String key = e.getString("key"), date = e.getString("date");
-            long start = localStart(date, e.optInt("hour", 20));
+            long start = localStart(date, e.optInt("hour", 19));
             ContentValues v = new ContentValues();
             v.put(CalendarContract.Events.TITLE, e.optString("title"));
             v.put(CalendarContract.Events.DESCRIPTION, e.optString("desc"));

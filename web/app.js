@@ -26,8 +26,8 @@
   var WIZ_SEATS = "Section 109, Row E, seats 1-2";
   var WIZ = {id: "wiz", name: "Washington Wizards", league: "NBA", venue: "Capital One Arena", seats: WIZ_SEATS, seatCount: 2, face: "", builtin: true, games: []};
   var MKTS = [["TM","Ticketmaster",15],["SH","StubHub",10],["SG","SeatGeek",10],["VS","Vivid Seats",10],["TP","TickPick",10],["OT","Other",10]];
-  var state = {v: 2, active: "wiz", all: false, teams: [WIZ], prices: {}, sales: {}, mhist: {}, prefs: {theme: "system", weeks: 3, view: "soon", drop: 25, jump: 15, usual: "TM", calName: "Ticketmaster", gameHour: 20, weeklyOn: true, weeklyDay: 1, weeklyHour: 10, target: 10, digestOn: true, digestHour: 8, setupDone: false, listDays: 3, lastCall: true, sort: "date", spike: 25, weather: true, fees: {TM: 15, SH: 10, SG: 10, VS: 10, TP: 10, OT: 10}}};
-  var RECORDS = {}, SCHED = {}, HIST = {}, WX = {};
+  var state = {v: 2, active: "wiz", all: false, teams: [WIZ], prices: {}, sales: {}, mhist: {}, prefs: {theme: "system", weeks: 3, view: "soon", drop: 25, jump: 15, usual: "TM", calName: "Ticketmaster", gameHour: 19, weeklyOn: true, weeklyDay: 1, weeklyHour: 10, target: 10, digestOn: true, digestHour: 8, setupDone: false, listDays: 3, lastCall: true, sort: "date", spike: 25, weather: true, fees: {TM: 15, SH: 10, SG: 10, VS: 10, TP: 10, OT: 10}}};
+  var RECORDS = {}, LIVE = {}, SCHED = {}, HIST = {}, WX = {};
   var LINKS = {}, MARKET = {}, ALERTS = [], UPDATED = null, FETCH_NOTE = "";
   var Native = null;
 
@@ -52,7 +52,8 @@
       state.all = state.all || false;
     }
     if (!state.teams.some(function (t) { return t.id === state.active; })) state.active = state.teams[0].id;
-    var DP = {calName: "Ticketmaster", gameHour: 20, weeklyOn: true, weeklyDay: 1, weeklyHour: 10}; Object.keys(DP).forEach(function (k) { if (state.prefs[k] == null) state.prefs[k] = DP[k]; });
+    var DP = {calName: "Ticketmaster", gameHour: 19, weeklyOn: true, weeklyDay: 1, weeklyHour: 10}; Object.keys(DP).forEach(function (k) { if (state.prefs[k] == null) state.prefs[k] = DP[k]; });
+    if (!state.prefs.gh19) { state.prefs.gh19 = 1; state.prefs.gameHour = 19; }
     if (!state.prefs.tmDefault) { state.prefs.tmDefault = 1; state.prefs.usual = "TM"; }
     Object.keys(state.sales).forEach(function (tid) { var S = state.sales[tid]; Object.keys(S).forEach(function (g) { if (!Array.isArray(S[g])) S[g] = [S[g]]; }); });
     state.teams.forEach(function (t) { if (t.id === "wiz" && (!t.seats || /rows E1 and E2/i.test(t.seats))) t.seats = WIZ_SEATS; });
@@ -117,8 +118,8 @@
       if (nt != null && (!best || nt > best.nt)) best = {name: x[1], nt: nt};
       if (q.lo || q.hi || q.ask) filled++;
       rows += '<div class="vrow"><a class="vn" href="' + esc(vendorURL(x[0], T, G)) + '" target="_blank" rel="noopener" title="' + (direct ? "Opens this game" : "Opens the search or team page") + '">' + x[1] + '</a>' +
-        '<input type="number" inputmode="decimal" min="0" placeholder="Asking $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="ask" aria-label="' + x[1] + ' asking price" value="' + (q.ask || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" placeholder="Low $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="lo" aria-label="' + x[1] + ' low" value="' + (q.lo || "") + '">' +
+        '<input type="number" inputmode="decimal" min="0" placeholder="Asking $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="ask" aria-label="' + x[1] + ' asking price" value="' + (q.ask || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" placeholder="High $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="hi" aria-label="' + x[1] + ' high" value="' + (q.hi || "") + '">' +
         '<span class="vnet">' + (nt == null ? "" : "nets " + money(Math.round(nt * 100) / 100)) + '</span></div>';
     });
@@ -184,9 +185,49 @@
   function fee(mk) { var f = parseFloat(state.prefs.fees[mk]); return isNaN(f) ? 10 : f; }
   function net(price, mk) { return price * (1 - fee(mk) / 100); }
   function mkName(k) { for (var i = 0; i < MKTS.length; i++) if (MKTS[i][0] === k) return MKTS[i][1]; return k; }
+  function recOf(name) { return LIVE[name] || RECORDS[name]; }
   function recText(T, G) {
-    var a = RECORDS[T.name], b = RECORDS[G.opp];
+    var a = recOf(T.name), b = recOf(G.opp);
     return nick(T.name) + " " + (a || "—") + " · " + nick(G.opp) + " " + (b || "—");
+  }
+  /* ---------- live records: refreshed from ESPN standings the first time the app opens each day ---------- */
+  var ESPN_PATH = {NBA: "basketball/nba", NFL: "football/nfl", NHL: "hockey/nhl", MLB: "baseball/mlb", WNBA: "basketball/wnba"}, RECKEY = "ss-rec";
+  function todayKey() { var d = new Date(); return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+  function getText(url) {
+    if (Native && Native.httpGet) return Native.httpGet({url: url}).then(function (r) { if (r.status !== 200) throw new Error("HTTP " + r.status); return r.body; });
+    return fetch(url).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); });
+  }
+  function parseStandings(txt) {
+    var out = {};
+    (function walk(o) {
+      if (!o || typeof o !== "object") return;
+      if (Array.isArray(o)) { o.forEach(walk); return; }
+      if (o.team && Array.isArray(o.stats)) {
+        var rec = "", w = null, l = null;
+        o.stats.forEach(function (st) { if (st.name === "overall" && st.displayValue) rec = st.displayValue; if (st.name === "wins") w = st.displayValue; if (st.name === "losses") l = st.displayValue; });
+        if (!rec && w != null && l != null) rec = w + "-" + l;
+        if (rec && o.team.displayName) out[o.team.displayName] = rec;
+        return;
+      }
+      Object.keys(o).forEach(function (k) { walk(o[k]); });
+    })(JSON.parse(txt));
+    return out;
+  }
+  function applyLive(data) { LIVE = {}; Object.keys(data || {}).forEach(function (lg) { Object.keys(data[lg]).forEach(function (n) { LIVE[n] = data[lg][n]; }); }); }
+  function refreshRecords() {
+    var cache = {}; try { cache = JSON.parse(localStorage.getItem(RECKEY) || "{}"); } catch (e) {}
+    cache.data = cache.data || {}; applyLive(cache.data);
+    var need = {}; state.teams.forEach(function (T) { if (ESPN_PATH[T.league]) need[T.league] = 1; });
+    var leagues = Object.keys(need), fresh = cache.day === todayKey() && leagues.every(function (l) { return cache.data[l]; });
+    if (fresh) return;
+    Promise.all(leagues.map(function (l) {
+      return getText("https://site.api.espn.com/apis/v2/sports/" + ESPN_PATH[l] + "/standings").then(function (t) { var m = parseStandings(t); if (!Object.keys(m).length) throw new Error("empty"); cache.data[l] = m; return true; }).catch(function () { return false; });
+    })).then(function (res) {
+      applyLive(cache.data);
+      if (res.length && res.every(Boolean)) cache.day = todayKey();
+      try { localStorage.setItem(RECKEY, JSON.stringify(cache)); } catch (e) {}
+      render();
+    });
   }
   function useMarket(T) { return (T || team()).useMarket !== false; }
   function marketFor(G, T) { return useMarket(T) && (T || team()).id === "wiz" && G.builtin ? MARKET["g" + G.id] : null; }
@@ -618,7 +659,7 @@
     if (/visit|vs\.|wembanyama|lebron|curry|doncic|opener|finale|nbc|christmas|rivalry|star|old team/i.test(G.tag || "")) sc += 12;
     if ((mo === 12 && day >= 24 && day <= 26) || (mo === 1 && day === 1) || (mo === 11 && day >= 26 && day <= 30)) sc += 8;
     if (T.league === "NBA" && MARQUEE.indexOf(G.opp) !== -1) sc += 8;
-    var o = winPct(RECORDS[G.opp]), me = winPct(RECORDS[T.name]);
+    var o = winPct(recOf(G.opp)), me = winPct(recOf(T.name));
     if (o != null) sc += Math.round((o - 0.5) * 40);
     if (me != null) sc += Math.round((me - 0.5) * 20);
     return Math.max(0, Math.min(100, sc));
@@ -1065,7 +1106,7 @@
     var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2], hour, 0, 0); d = new Date(d.getTime() + (plusMin || 0) * 60000);
     return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + "T" + pad2(d.getHours()) + pad2(d.getMinutes()) + "00";
   }
-  function gameHour() { var h = parseInt(state.prefs.gameHour, 10); return isNaN(h) ? 20 : Math.min(23, Math.max(0, h)); }
+  function gameHour() { var h = parseInt(state.prefs.gameHour, 10); return isNaN(h) ? 19 : Math.min(23, Math.max(0, h)); }
   function icsFor(list) {
     var ld = Math.max(0, +state.prefs.listDays || 0);
     var L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//SeatSeller//EN"];
@@ -1171,7 +1212,7 @@
     $("wkDone").addEventListener("click", function (e) { e.preventDefault(); closeDlg($("weeklyDlg")); render(); });
     $("selfTestBtn").addEventListener("click", selfTest);
     $("prefCalName").addEventListener("change", function (e) { state.prefs.calName = e.target.value.trim(); save(); });
-    $("prefGameHour").addEventListener("change", function (e) { var v = Math.min(23, Math.max(0, parseInt(e.target.value, 10))); if (isNaN(v)) v = 20; e.target.value = v; state.prefs.gameHour = v; save(); });
+    $("prefGameHour").addEventListener("change", function (e) { var v = Math.min(23, Math.max(0, parseInt(e.target.value, 10))); if (isNaN(v)) v = 19; e.target.value = v; state.prefs.gameHour = v; save(); });
     $("prefWeekly").addEventListener("change", function (e) { state.prefs.weeklyOn = e.target.checked; save(); pushDigest(); });
     $("prefWeeklyDay").addEventListener("change", function (e) { state.prefs.weeklyDay = parseInt(e.target.value, 10) || 1; save(); pushDigest(); });
     $("prefWeeklyHour").addEventListener("change", function (e) { var v = Math.min(23, Math.max(0, parseInt(e.target.value, 10))); if (isNaN(v)) v = 10; e.target.value = v; state.prefs.weeklyHour = v; save(); pushDigest(); });
@@ -1224,6 +1265,6 @@
     setTimeout(hide, MAX_SPLASH); // safety so a stalled network can never trap you on the splash
   }
 
-  load(); wire(); wire2(); render(); wireNative(); staleCheck(); if (!state.prefs.setupDone) setTimeout(openSetup, 1400); if (Native) { try { Native.setBackupData({json: backupJSON()}); } catch (e) {} syncReminders(); pushWidget(); pushDigest(); }
+  load(); wire(); wire2(); render(); wireNative(); refreshRecords(); document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshRecords(); }); staleCheck(); if (!state.prefs.setupDone) setTimeout(openSetup, 1400); if (Native) { try { Native.setBackupData({json: backupJSON()}); } catch (e) {} syncReminders(); pushWidget(); pushDigest(); }
   splashGate(loadPrices());
 })();

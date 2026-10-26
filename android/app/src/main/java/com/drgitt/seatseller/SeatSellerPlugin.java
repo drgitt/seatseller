@@ -123,7 +123,7 @@ public class SeatSellerPlugin extends Plugin {
     @PluginMethod
     public void addToCalendarIntent(PluginCall call) {
         try {
-            long start = CalendarSync.localStart(call.getString("date"), call.getInt("hour", 20));
+            long start = CalendarSync.localStart(call.getString("date"), call.getInt("hour", 19));
             Intent i = new Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI)
                     .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, start)
                     .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, start + 3L * 3600000L)
@@ -325,6 +325,36 @@ public class SeatSellerPlugin extends Plugin {
         android.app.PendingIntent pi = android.app.PendingIntent.getBroadcast(ctx, 1002, i, android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
         Recurring.arm(ctx, am, System.currentTimeMillis() + 60000L, pi);
         call.resolve(status());
+    }
+
+    @PluginMethod
+    public void httpGet(final PluginCall call) {
+        final String url = call.getString("url", "");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                JSObject o = new JSObject();
+                try {
+                    if (!url.startsWith("https://site.api.espn.com/")) { call.reject("blocked"); return; }
+                    java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+                    c.setConnectTimeout(15000); c.setReadTimeout(20000);
+                    int code = c.getResponseCode();
+                    o.put("status", code);
+                    if (code == 200) {
+                        InputStream in = c.getInputStream();
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        byte[] buf = new byte[8192]; int n;
+                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                        in.close();
+                        o.put("body", out.toString("UTF-8"));
+                    }
+                    c.disconnect();
+                    call.resolve(o);
+                } catch (Exception e) {
+                    call.reject("http: " + e.getMessage());
+                }
+            }
+        }).start();
     }
 
     @PluginMethod

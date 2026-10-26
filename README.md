@@ -54,7 +54,7 @@ A navy ticket splash shows while the app loads and stays for at least one second
 - **Partner split:** name a partner and their share of profit. The profit screen shows what they're owed, and **Share summary** sends a text summary through any app.
 
 ### Calendar, asking price, optional market data
-- **Calendar button** on each game opens a chooser: Phone calendar, Google Calendar (web link), or a downloadable calendar file. Events start at **8 PM** on game day and run 3 hours (hour is a setting).
+- **Calendar button** on each game opens a chooser: Phone calendar, Google Calendar (web link), or a downloadable calendar file. Events run **7 PM to 10 PM** on game day (start hour is a setting).
 - **Ticketmaster calendar:** the Phone calendar option files the event directly into the phone calendar whose name or account contains "Ticketmaster" (changeable in Settings; falls back to your primary calendar and says so). Google's web link cannot choose a calendar, so it lands in your default one.
 - **Asking price:** each game has an Asking $ box for the price you are trying to sell at. It shows as a tag with what it nets after fees, pre-fills Mark sold, and drives the Sell queue and digest. The weekly check has it too.
 - **Market low and Ticketmaster info are optional:** Settings → your team → uncheck "Show market low and Ticketmaster price info" and the app uses only the prices you enter. No market lows, spike or alert banners, or stale warning.
@@ -73,6 +73,9 @@ A navy ticket splash shows while the app loads and stays for at least one second
 - Each ticket seller line has Asking, Low and High boxes. The top row of each card is rolled up from them: Low is the lowest seller low, High is the highest seller high, and the middle box shows the range of seller asking prices (lowest ask - highest ask).
 - The game notes box shows the game's note, plus the best-net line: which seller nets the most at the current lowest low. It updates whenever the lowest low changes.
 - The Ticket sellers section is collapsible and stays open or closed as you leave it, even while you type.
+
+### Live records
+- Team records (yours and each opponent shown) refresh from ESPN standings the first time the app opens each day, and again if you return to it on a new day. If the refresh fails, it keeps the last good numbers and tries again next time you open it. NBA, NFL, NHL, MLB and WNBA are supported.
 
 ### Selling workflow
 - **Profit target:** set the margin over face you want (default 10%). Advice thresholds follow it.
