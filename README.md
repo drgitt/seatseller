@@ -70,7 +70,8 @@ A navy ticket splash shows while the app loads and stays for at least one second
 - Vivid Seats and TickPick open the exact game when the feed has its link (`links` in `data/prices.json`, filled for the games those sites currently list). Otherwise they open the Wizards team page on that site. Other teams open that site's search.
 
 ### Roll-ups
-- Each ticket seller line has Seats, Low and High boxes. The Seats, Low and High boxes at the top of the card are rolled up from them: seats are summed, Low is the lowest seller low, High is the highest seller high. Asking stays your own number.
+- Each ticket seller line has Asking, Low and High boxes. The top row of each card is rolled up from them: Low is the lowest seller low, High is the highest seller high, and the middle box shows the range of seller asking prices (lowest ask - highest ask).
+- The game notes box shows the game's note, plus the best-net line: which seller nets the most at the current lowest low. It updates whenever the lowest low changes.
 - The Ticket sellers section is collapsible and stays open or closed as you leave it, even while you type.
 
 ### Selling workflow

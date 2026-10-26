@@ -115,32 +115,50 @@
     VENDORS.forEach(function (x) {
       var q = (p.v && p.v[x[0]]) || {}, lo = parseFloat(q.lo), nt = isNaN(lo) ? null : lo * (1 - fee(x[0]) / 100), direct = T.id === "wiz" && G.builtin && (LINKS["g" + G.id] || {})[x[0]];
       if (nt != null && (!best || nt > best.nt)) best = {name: x[1], nt: nt};
-      if (q.lo || q.hi || q.seats) filled++;
+      if (q.lo || q.hi || q.ask) filled++;
       rows += '<div class="vrow"><a class="vn" href="' + esc(vendorURL(x[0], T, G)) + '" target="_blank" rel="noopener" title="' + (direct ? "Opens this game" : "Opens the search or team page") + '">' + x[1] + '</a>' +
-        '<input type="number" inputmode="numeric" min="0" step="1" placeholder="Seats" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="seats" aria-label="' + x[1] + ' seats available" value="' + (q.seats || "") + '">' +
+        '<input type="number" inputmode="decimal" min="0" placeholder="Asking $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="ask" aria-label="' + x[1] + ' asking price" value="' + (q.ask || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" placeholder="Low $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="lo" aria-label="' + x[1] + ' low" value="' + (q.lo || "") + '">' +
         '<input type="number" inputmode="decimal" min="0" placeholder="High $" data-g="' + esc(g) + '" data-vk="' + x[0] + '" data-vf="hi" aria-label="' + x[1] + ' high" value="' + (q.hi || "") + '">' +
         '<span class="vnet">' + (nt == null ? "" : "nets " + money(Math.round(nt * 100) / 100)) + '</span></div>';
     });
-    return '<details class="vend" data-vg="' + esc(g) + '"' + (openVend[g] ? ' open' : '') + '><summary>Ticket sellers' + (filled ? ' · ' + filled + ' entered' : '') + '</summary>' + rows + (best ? '<div class="hint">Best net at the low price: ' + best.name + ' about ' + money(Math.round(best.nt * 100) / 100) + ' a seat after fees.</div>' : '') + '</details>';
+    return '<details class="vend" data-vg="' + esc(g) + '"' + (openVend[g] ? ' open' : '') + '><summary>Ticket sellers' + (filled ? ' · ' + filled + ' entered' : '') + '</summary>' + rows + '</details>';
   }
   /* Top Seats / Low / High are rolled up from the ticket seller lines: seats summed, lowest low, highest high. */
+  function askRange(p) {
+    var lo = parseFloat(p.ask), hi = parseFloat(p.askMax);
+    if (isNaN(lo)) return "";
+    return isNaN(hi) || hi === lo ? "$" + lo : "$" + lo + " - $" + hi;
+  }
+  /* Game notes box: the game's note on line one, the best-net seller at the lowest low on line two. */
+  function bestNetText(p) {
+    var lo = parseFloat(p.lo); if (isNaN(lo)) return "";
+    var best = null; VENDORS.forEach(function (x) { var nt = lo * (1 - fee(x[0]) / 100); if (!best || nt > best.nt) best = {name: x[1], nt: nt}; });
+    return best ? "Best net at low (" + money(lo) + "): " + best.name + " ~" + money(Math.round(best.nt * 100) / 100) + "/seat" : "";
+  }
+  function noteBoxHTML(g, G, T, p) {
+    return '<div class="tagbox" id="note-' + g + '"><div class="n1">' + esc(G.tag || "") + '</div><div class="n2">' + esc(bestNetText(p)) + '</div></div>';
+  }
+  function paintNote(g) {
+    var el = $("note-" + g); if (!el) return; var G = gameById(g), p = prices()[g] || {};
+    el.innerHTML = '<div class="n1">' + esc(G && G.tag || "") + '</div><div class="n2">' + esc(bestNetText(p)) + '</div>';
+  }
   function aggregateVendors(g) {
     var p = prices()[g]; if (!p || !p.v) return;
-    var lo = NaN, hi = NaN, seats = 0, anySeats = false, now = Date.now();
+    var lo = NaN, hi = NaN, alo = NaN, ahi = NaN, now = Date.now();
     VENDORS.forEach(function (x) {
       var q = p.v[x[0]]; if (!q) return;
-      var l = parseFloat(q.lo), h = parseFloat(q.hi), n = parseInt(q.seats, 10);
+      var l = parseFloat(q.lo), h = parseFloat(q.hi), a = parseFloat(q.ask);
       if (!isNaN(l) && (isNaN(lo) || l < lo)) lo = l;
       if (!isNaN(h) && (isNaN(hi) || h > hi)) hi = h;
-      if (!isNaN(n) && n >= 0) { seats += n; anySeats = true; }
+      if (!isNaN(a)) { if (isNaN(alo) || a < alo) alo = a; if (isNaN(ahi) || a > ahi) ahi = a; }
     });
     var set = function (id, v) { var el = $(id + g); if (el) el.value = v; };
     if (!isNaN(lo)) { p.lo = String(lo); set("lo-", p.lo); p.lh = p.lh || []; var ll = p.lh[p.lh.length - 1]; if (ll && new Date(ll[0]).toDateString() === new Date(now).toDateString()) ll[1] = lo; else p.lh.push([now, lo]); p.lh = p.lh.slice(-60); }
     else { delete p.lo; set("lo-", ""); }
     if (!isNaN(hi)) { p.hi = String(hi); set("hi-", p.hi); } else { delete p.hi; set("hi-", ""); }
-    if (anySeats) { p.seats = String(seats); set("se-", p.seats); p.hist = p.hist || []; var last = p.hist[p.hist.length - 1]; if (last && new Date(last.t).toDateString() === new Date(now).toDateString()) { last.n = seats; last.t = now; } else p.hist.push({n: seats, t: now}); p.hist = p.hist.slice(-14); }
-    else { delete p.seats; set("se-", ""); }
+    if (!isNaN(alo)) { p.ask = String(alo); p.askMax = String(ahi); } else { delete p.ask; delete p.askMax; }
+    set("ask-", askRange(p)); paintNote(g);
   }
   function salesOf(T, g) { var v = (state.sales[T.id] || {})[g]; return !v ? [] : Array.isArray(v) ? v : [v]; }
   function setSales(T, g, arr) { var S = state.sales[T.id] || (state.sales[T.id] = {}); if (arr.length) S[g] = arr; else delete S[g]; }
@@ -235,16 +253,15 @@
     pills += '<span class="pill hot" id="fast-' + g + '" hidden></span>';
     pills += '<span class="pill ' + sig[1] + '" id="sig-' + g + '">' + sig[0] + '</span>';
     pills += '<span class="mk" id="mk-' + g + '"></span><span class="mk" id="sd-' + g + '"></span><span class="mk" id="nt-' + g + '"></span>';
-    var tag = G.tag ? '<span class="tagbox">' + esc(G.tag) + '</span>' : '';
+    var tag = noteBoxHTML(g, G, T, p);
     var idl = G.builtin ? '' : '<button type="button" class="x" data-del="' + esc(g) + '" aria-label="Remove game vs ' + esc(name) + '">Remove</button>';
     return '<div class="' + cls + '" id="g' + g + '">' +
       '<div class="date"><span class="dow">' + DOW[d.getDay()] + '</span><span class="dnum">' + d.getDate() + '</span></div>' +
-      '<div class="who"><div class="opp">vs ' + esc(name) + '</div><div class="rec" id="rec-' + g + '">' + esc(recText(T, G)) + '</div><div class="advice" id="adv-' + g + '"></div><div class="meta">' + pills + tag + idl + '</div><div class="spark" id="sp-' + g + '"></div>' + (sale ? afterRows(g, sales) : '') + '</div>' +
+      '<div class="who"><div class="opp">vs ' + esc(name) + '</div><div class="rec" id="rec-' + g + '">' + esc(recText(T, G)) + '</div><div class="advice" id="adv-' + g + '"></div><div class="meta">' + pills + idl + '</div>' + tag + '<div class="spark" id="sp-' + g + '"></div>' + (sale ? afterRows(g, sales) : '') + '</div>' +
       '<div class="act"><div class="prices">' +
-        '<input type="number" inputmode="numeric" min="0" step="1" id="se-' + g + '" data-g="' + esc(g) + '" data-k="seats" placeholder="Seats" aria-label="Seats listed in my section for ' + esc(name) + '" value="' + (p.seats || "") + '">' +
-        '<input type="number" inputmode="decimal" min="0" id="lo-' + g + '" data-g="' + esc(g) + '" data-k="lo" placeholder="Low $" aria-label="Lowest price in my rows for ' + esc(name) + '" value="' + (p.lo || "") + '">' +
-        '<input type="number" inputmode="decimal" min="0" id="ask-' + g + '" data-g="' + esc(g) + '" data-k="ask" placeholder="Asking $" aria-label="My asking price for ' + esc(name) + '" value="' + (p.ask || "") + '">' +
-        '<input type="number" inputmode="decimal" min="0" id="hi-' + g + '" data-g="' + esc(g) + '" data-k="hi" placeholder="High $" aria-label="Highest price in my rows for ' + esc(name) + '" value="' + (p.hi || "") + '">' +
+        '<input type="number" inputmode="decimal" min="0" id="lo-' + g + '" data-g="' + esc(g) + '" data-k="lo" placeholder="Low $" aria-label="Lowest price across ticket sellers for ' + esc(name) + '" value="' + (p.lo || "") + '">' +
+        '<input type="text" readonly id="ask-' + g + '" class="askrange" placeholder="Asking range" aria-label="Asking price range across ticket sellers for ' + esc(name) + '" value="' + esc(askRange(p)) + '">' +
+        '<input type="number" inputmode="decimal" min="0" id="hi-' + g + '" data-g="' + esc(g) + '" data-k="hi" placeholder="High $" aria-label="Highest price across ticket sellers for ' + esc(name) + '" value="' + (p.hi || "") + '">' +
       '</div></div>' +
       '<div class="links">' +
         '<label class="chk soldchk"><input type="checkbox" data-soldchk="' + esc(g) + '"' + (fullySold(T, g) ? ' checked' : '') + '> ' + (sale && left > 0 ? 'Fully sold' : 'Sold') + '</label>' +
@@ -564,7 +581,7 @@
         vq.t = Date.now(); aggregateVendors(vg); save();
         var VG = gameById(vg); if (VG) { paintFast(VG); paintNet(VG); paintAdvice(VG); paintSpark(VG); paintSpike(VG); }
         var nt = el.parentNode.querySelector(".vnet"); if (nt) { var vl = parseFloat((vp.v[el.dataset.vk] || {}).lo); nt.textContent = isNaN(vl) ? "" : "nets " + money(Math.round(vl * (1 - fee(el.dataset.vk) / 100) * 100) / 100); }
-        var sm = el.closest("details"); if (sm) sm.querySelector("summary").textContent = "Ticket sellers" + (function () { var c = 0; VENDORS.forEach(function (x) { var q = vp.v[x[0]]; if (q && (q.lo || q.hi || q.seats)) c++; }); return c ? " · " + c + " entered" : ""; })();
+        var sm = el.closest("details"); if (sm) sm.querySelector("summary").textContent = "Ticket sellers" + (function () { var c = 0; VENDORS.forEach(function (x) { var q = vp.v[x[0]]; if (q && (q.lo || q.hi || q.ask)) c++; }); return c ? " · " + c + " entered" : ""; })();
         stats(); return;
       }
       if (el.dataset && el.dataset.k === "lo") {
