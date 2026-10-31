@@ -56,6 +56,7 @@
     <button type="button" class="btn ghost" id="addGameBtn">+ Add games</button>
     <button type="button" class="btn ghost" id="weeklyBtn">Weekly check</button>
     <button type="button" class="btn ghost" id="queueBtn">Sell queue</button>
+    <button type="button" class="btn ghost" id="histBtn">See History</button>
     <button type="button" class="btn ghost" id="profitBtn">Profit</button>
     <div class="fresh mono" id="fresh"></div>
   </div>
@@ -182,6 +183,19 @@
       <div class="btn-row"><a class="btn" id="calGoogle" target="_blank" rel="noopener">Google Calendar</a></div>
       <div class="btn-row"><button type="button" class="btn ghost" id="calIcs">Download calendar file</button></div>
       <p class="hint" id="calMsg"></p>
+    </div>
+  </form>
+</dialog>
+
+<!-- History -->
+<dialog id="histDlg" aria-labelledby="histTitle">
+  <form method="dialog" class="dlg">
+    <div class="dlg-head"><h2 id="histTitle">History</h2><button class="btn ghost" value="close">Done</button></div>
+    <div class="dlg-body">
+      <p class="hint" id="histTeam"></p>
+      <label>Month <select id="histMonth"></select></label>
+      <div id="histBody"></div>
+      <p class="hint">Edits save to your ledger and your Drive backup. Clear a sold price to mark that sale as not sold. Entering a sold price on an unsold game records all your seats sold at that price.</p>
     </div>
   </form>
 </dialog>

@@ -194,3 +194,7 @@ button.sell{border:0;font-family:inherit;cursor:pointer}
 .tagbox{display:block !important;height:46px;overflow:hidden;margin-top:6px;-webkit-line-clamp:unset;-webkit-box-orient:unset;width:100%;max-width:306px;box-sizing:border-box}
 .tagbox .n1,.tagbox .n2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:17px}
 .prices input.askrange{background:transparent;cursor:default}
+
+.hrow{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:8px 0}
+.hrow label{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0}
+.hrow input{width:110px}

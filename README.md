@@ -77,6 +77,10 @@ A navy ticket splash shows while the app loads and stays for at least one second
 ### Live records
 - Team records (yours and each opponent shown) refresh from ESPN standings the first time the app opens each day, and again if you return to it on a new day. If the refresh fails, it keeps the last good numbers and tries again next time you open it. NBA, NFL, NHL, MLB and WNBA are supported.
 
+### History and average sold price
+- **See History** opens past home games with a Month pull-down (All months or one month). Each game has editable **Sold $ per seat** and **Paid $ per seat** (what you paid for the season-ticket seat that game). Clear a sold price to mark it not sold; type one on an unsold game to record all your seats sold at that price. Edits flow into the Profit screen, tax CSV and the Drive backup.
+- The home screen shows **Avg sold per seat** (and what it nets after fees) across everything you've sold for the active team.
+
 ### Selling workflow
 - **Profit target:** set the margin over face you want (default 10%). Advice thresholds follow it.
 - **Sell queue:** ranks games by the profit you would pocket after fees on the seats you still own.

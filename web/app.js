@@ -26,7 +26,7 @@
   var WIZ_SEATS = "Section 109, Row E, seats 1-2";
   var WIZ = {id: "wiz", name: "Washington Wizards", league: "NBA", venue: "Capital One Arena", seats: WIZ_SEATS, seatCount: 2, face: "", builtin: true, games: []};
   var MKTS = [["TM","Ticketmaster",15],["SH","StubHub",10],["SG","SeatGeek",10],["VS","Vivid Seats",10],["TP","TickPick",10],["OT","Other",10]];
-  var state = {v: 2, active: "wiz", all: false, teams: [WIZ], prices: {}, sales: {}, mhist: {}, prefs: {theme: "system", weeks: 3, view: "soon", drop: 25, jump: 15, usual: "TM", calName: "Ticketmaster", gameHour: 19, weeklyOn: true, weeklyDay: 1, weeklyHour: 10, target: 10, digestOn: true, digestHour: 8, setupDone: false, listDays: 3, lastCall: true, sort: "date", spike: 25, weather: true, fees: {TM: 15, SH: 10, SG: 10, VS: 10, TP: 10, OT: 10}}};
+  var state = {v: 2, active: "wiz", all: false, teams: [WIZ], prices: {}, sales: {}, paid: {}, mhist: {}, prefs: {theme: "system", weeks: 3, view: "soon", drop: 25, jump: 15, usual: "TM", calName: "Ticketmaster", gameHour: 19, weeklyOn: true, weeklyDay: 1, weeklyHour: 10, target: 10, digestOn: true, digestHour: 8, setupDone: false, listDays: 3, lastCall: true, sort: "date", spike: 25, weather: true, fees: {TM: 15, SH: 10, SG: 10, VS: 10, TP: 10, OT: 10}}};
   var RECORDS = {}, LIVE = {}, SCHED = {}, HIST = {}, WX = {};
   var LINKS = {}, MARKET = {}, ALERTS = [], UPDATED = null, FETCH_NOTE = "";
   var Native = null;
@@ -41,7 +41,7 @@
     var s = null;
     try { s = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
     if (s && s.teams && s.teams.length) {
-      state.teams = s.teams; state.active = s.active || s.teams[0].id; state.all = !!s.all; state.prices = s.prices || {}; state.sales = s.sales || {}; state.mhist = s.mhist || {};
+      state.teams = s.teams; state.active = s.active || s.teams[0].id; state.all = !!s.all; state.prices = s.prices || {}; state.sales = s.sales || {}; state.paid = s.paid || {}; state.mhist = s.mhist || {};
       for (var k in state.prefs) if (k !== "fees" && s.prefs && s.prefs[k] != null) state.prefs[k] = s.prefs[k];
       if (s.prefs && s.prefs.fees) for (var m in s.prefs.fees) state.prefs.fees[m] = s.prefs.fees[m];
     } else {
@@ -357,6 +357,8 @@
     h += '<div class="stat"><b>' + wk + '</b><span>Games this week</span></div>';
     h += '<div class="stat"><b' + (fast ? ' style="color:var(--hot)"' : '') + '>' + fast + '</b><span>Selling fast</span></div>';
     h += '<div class="stat"><b>' + (best ? money(P[best.id].lo) : "—") + '</b><span>' + (best ? "Best low: " + esc(best.opp) : "Best logged low") + '</span></div>';
+    var ss = 0, sn = 0, snet = 0; Object.keys(state.sales[state.active] || {}).forEach(function (id) { salesOf(team(), id).forEach(function (x) { ss += x.n * x.price; snet += x.n * net(x.price, x.mk); sn += x.n; }); });
+    h += '<div class="stat"><b>' + (sn ? money(Math.round(ss / sn * 100) / 100) : "—") + '</b><span>' + (sn ? "Avg sold per seat · " + sn + " seat" + (sn > 1 ? "s" : "") + " · nets " + money(Math.round(snet / sn * 100) / 100) : "Avg sold per seat") + '</span></div>';
     $("stats").innerHTML = h;
   }
 
@@ -834,9 +836,10 @@
   function saleRows(filterYear) {
     var rows = [];
     state.teams.forEach(function (T) {
-      var f = parseFloat(T.face), id;
+      var f0 = parseFloat(T.face), id;
       Object.keys(state.sales[T.id] || {}).forEach(function (id) {
         var G = games(T).filter(function (q) { return String(q.id) === id; })[0];
+        var po = parseFloat((state.paid[T.id] || {})[id]), f = isNaN(po) ? f0 : po;
         salesOf(T, id).forEach(function (x, idx) {
           var yr = new Date(x.at || Date.now()).getFullYear(); if (filterYear && yr !== filterYear) return;
           var fp = x.fee != null ? x.fee : fee(x.mk), gross = x.n * x.price, nt = gross * (1 - fp / 100), face = isNaN(f) ? null : f * x.n;
@@ -913,6 +916,43 @@
     copyText(text).then(function () { toast("Summary copied"); });
   }
 
+
+  /* ---------- history: past home games, editable sold price and price paid ---------- */
+  function pastGames(T) { return games(T).filter(function (G) { return daysAway(G.date) < 0; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; }); }
+  function monthKey(iso) { return iso.slice(0, 7); }
+  function monthLabel(k) { var p = k.split("-"); return MON[+p[1] - 1] + " " + p[0]; }
+  function openHistory() {
+    var T = team(), pg = pastGames(T), keys = [];
+    pg.forEach(function (G) { var k = monthKey(G.date); if (keys.indexOf(k) < 0) keys.push(k); });
+    $("histMonth").innerHTML = '<option value="">All months</option>' + keys.map(function (k) { return '<option value="' + k + '">' + monthLabel(k) + '</option>'; }).join("");
+    $("histTeam").textContent = T.name + " · home games already played";
+    paintHistory(); openDlg($("histDlg"));
+  }
+  function paintHistory() {
+    var T = team(), mo = $("histMonth").value, pg = pastGames(T).filter(function (G) { return !mo || monthKey(G.date) === mo; });
+    if (!pg.length) { $("histBody").innerHTML = '<p class="hint">No past home games yet.</p>'; return; }
+    var face = parseFloat(T.face);
+    $("histBody").innerHTML = pg.map(function (G) {
+      var g = G.id, sales = salesOf(T, g), po = (state.paid[T.id] || {})[g], paid = po != null ? po : (isNaN(face) ? "" : face);
+      var soldRows = sales.length ? sales.map(function (x, i) { return '<label>Sold ' + x.n + ' × $ per seat <input type="number" inputmode="decimal" min="0" step="0.01" data-hs="' + esc(g) + ':' + i + '" value="' + x.price + '"></label>'; }).join("")
+        : '<label>Sold $ per seat <input type="number" inputmode="decimal" min="0" step="0.01" data-hs="' + esc(g) + ':new" placeholder="blank = not sold"></label>';
+      return '<div class="hrow"><div class="hh"><b>vs ' + esc(G.opp) + '</b> <span class="hint">' + esc(fmtDay(parse(G.date).getTime())) + '</span></div>' + soldRows +
+        '<label>Paid $ per seat <input type="number" inputmode="decimal" min="0" step="0.01" data-hp="' + esc(g) + '" value="' + paid + '"></label></div>';
+    }).join("");
+  }
+  function histEdit(el) {
+    var T = team();
+    if (el.dataset.hp) {
+      var v = parseFloat(el.value), P = state.paid[T.id] = state.paid[T.id] || {};
+      if (isNaN(v)) delete P[el.dataset.hp]; else P[el.dataset.hp] = v;
+    } else if (el.dataset.hs) {
+      var sp = el.dataset.hs.split(":"), g = sp[0], arr = salesOf(T, g).slice(), pv = parseFloat(el.value);
+      if (sp[1] === "new") { if (isNaN(pv)) return; arr.push({n: seatsOwned(T), price: pv, mk: state.prefs.usual, fee: fee(state.prefs.usual), at: parse(gameById(g).date).getTime()}); }
+      else { var i = parseInt(sp[1], 10); if (!arr[i]) return; if (isNaN(pv)) arr.splice(i, 1); else { arr[i].price = pv; if (arr[i].payout != null) delete arr[i].payout; } }
+      setSales(T, g, arr);
+    }
+    save(); stats(); paintHistory();
+  }
 
   /* ---------- sell queue, weekly check, setup, self-test, digest ---------- */
   function expectedProfit(T, G) {
@@ -1202,6 +1242,9 @@
     // profit
     $("profitBtn").addEventListener("click", function () { $("profitBody").innerHTML = profitHTML(); openDlg($("profitDlg")); });
     // new features
+    $("histBtn").addEventListener("click", openHistory);
+    $("histMonth").addEventListener("change", paintHistory);
+    $("histBody").addEventListener("change", function (e) { if (e.target.dataset && (e.target.dataset.hs || e.target.dataset.hp)) histEdit(e.target); });
     $("list").addEventListener("toggle", function (e) { var d = e.target; if (d && d.dataset && d.dataset.vg) openVend[d.dataset.vg] = d.open; }, true);
     $("soldDlg").addEventListener("close", function () { render(); });
     $("queueBtn").addEventListener("click", function () { $("queueBody").innerHTML = queueHTML(); openDlg($("queueDlg")); });
